@@ -4,7 +4,6 @@
 
 ```text
 bootcamp_2/
-├── notebooks/       Exercise templates
 ├── solution/        Worked solution notebook
 ├── scripts/         Setup, launch and test commands
 ├── tests/           Instructor validation checks
@@ -12,6 +11,8 @@ bootcamp_2/
 ├── pyproject.toml   Dependencies
 └── uv.lock          Exact dependency versions
 ```
+
+The exercise template lives at [`exercises.py`](../exercises.py), in the repository root.
 
 Students use the setup/start scripts and solve `work/exercises.py`.
 The Python helper in `scripts/` and checks in `tests/` are maintenance code.
@@ -52,7 +53,7 @@ marimo's browser editor. Every later launch reopens that same file.
 3. Save with **Ctrl+S** (macOS: **Cmd+S**).
 4. Run the start command again whenever you want to resume.
 
-Your answers are in `work/exercises.py`, not the tracked `notebooks/exercises.py` template.
+Your answers are in `work/exercises.py`, not the tracked [`../exercises.py`](../exercises.py) template at the repository root.
 Setup, restart, and `git pull` do not overwrite that working copy. `work/` is
 Git-ignored: back it up separately if you want to keep your answers elsewhere.
 

@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def working_copy(solution: bool = False, root: Path = ROOT) -> Path:
     """Create a personal notebook once; never overwrite saved student work."""
-    source = root / "solution" / "solutions.py" if solution else root / "notebooks" / "exercises.py"
+    source = root / "solution" / "solutions.py" if solution else root.parent / "exercises.py"
     target = root / "work" / source.name
     target.parent.mkdir(parents=True, exist_ok=True)
     content = source.read_text(encoding="utf-8")

@@ -26,19 +26,19 @@ def test(with_data: bool = False, with_solution: bool = False) -> None:
     from tempfile import TemporaryDirectory
 
     with TemporaryDirectory() as directory:
-        root = Path(directory)
-        (root / "notebooks").mkdir()
-        (root / "notebooks" / "exercises.py").write_text("template", encoding="utf-8")
+        root = Path(directory) / "bootcamp_2"
+        root.mkdir()
+        (root.parent / "exercises.py").write_text("template", encoding="utf-8")
         personal = working_copy(root=root)
         assert personal.read_text(encoding="utf-8") == "template"
         personal.write_text("my saved answers", encoding="utf-8")
-        (root / "notebooks" / "exercises.py").write_text("updated template", encoding="utf-8")
+        (root.parent / "exercises.py").write_text("updated template", encoding="utf-8")
         assert working_copy(root=root).read_text(encoding="utf-8") == "my saved answers"
 
     subprocess.run([sys.executable, str(ROOT.parent / "scripts" / "check_repository.py")], check=True)
     subprocess.run(
         [sys.executable, "-m", "marimo", "check", "--strict",
-         str(ROOT / "notebooks" / "exercises.py"), str(ROOT / "solution" / "solutions.py")],
+         str(ROOT.parent / "exercises.py"), str(ROOT / "solution" / "solutions.py")],
         check=True,
     )
     # Exercise the libraries together, including torchvision's compiled extension.
@@ -59,7 +59,7 @@ def test(with_data: bool = False, with_solution: bool = False) -> None:
     assert torch.isfinite(loss).item()
 
     # Run the actual blank student app: unfinished answers must pause cleanly.
-    spec = importlib.util.spec_from_file_location("bootcamp_2_exercises", ROOT / "notebooks" / "exercises.py")
+    spec = importlib.util.spec_from_file_location("bootcamp_2_exercises", ROOT.parent / "exercises.py")
     assert spec and spec.loader
     notebook = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(notebook)

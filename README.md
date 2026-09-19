@@ -1,5 +1,8 @@
 # ReLU education 2026–2027
 
+The exercise notebook is at [`exercises.py`](exercises.py). Bootcamp setup scripts,
+tests and solutions live in `bootcamp_2/`.
+
 ## Start a bootcamp
 
 Install [Git](https://git-scm.com/downloads) and
