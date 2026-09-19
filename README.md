@@ -1,6 +1,6 @@
 # ReLU education 2026–2027
 
-The exercise notebook is at [`exercises.py`](exercises.py). Bootcamp setup scripts,
+The exercise notebook is at [`bootcamp_2/exercises.py`](bootcamp_2/exercises.py). Bootcamp setup scripts,
 tests and solutions live in `bootcamp_2/`.
 
 ## Start a bootcamp
