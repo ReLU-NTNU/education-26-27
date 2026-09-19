@@ -2,7 +2,8 @@
 
 `solutions.py` is a complete marimo solution notebook for all 27 exercises,
 including a two-epoch CPU training loop. It shares the bootcamp's uv environment
-and MNIST cache.
+and MNIST cache outside the repository. The launcher creates a personal copy
+in `work/solutions.py` and preserves it on later launches.
 
 From `bootcamp_2/`, open it with:
 

@@ -1,116 +1,107 @@
 # Bootcamp 2 · Python for machine learning
 
-An editable **marimo** notebook with 27 exercises covering NumPy, pandas,
-Matplotlib and a small PyTorch classifier. No Jupyter or GPU is required.
+27 exercises in NumPy, pandas, Matplotlib and CPU PyTorch, using **marimo**.
 
-## Get started
+## 1. Set up
 
 Install [Git](https://git-scm.com/downloads) and
-[uv](https://docs.astral.sh/uv/getting-started/installation/). uv installs the
-required Python 3.13 and creates `.venv` automatically. The first setup needs
-internet and downloads several hundred MB, mostly CPU PyTorch.
+[uv](https://docs.astral.sh/uv/getting-started/installation/), then:
 
 ```sh
 git clone https://github.com/ReLU-NTNU/education-26-27.git
 cd education-26-27/bootcamp_2
 ```
 
-**macOS / Linux**
+| | macOS / Linux | Windows PowerShell |
+|---|---|---|
+| Set up once | `./setup.sh` | `.\setup.ps1` |
+| Start or resume | `./start.sh` | `.\start.ps1` |
+
+uv installs Python 3.13 and the locked dependencies in `.venv`. The first setup
+needs internet and downloads several hundred MB. No GPU, Jupyter, environment
+activation, or kernel selection is needed.
+
+If PowerShell blocks scripts, run these equivalent commands:
 
 ```sh
-./setup.sh
-./start.sh
-```
-
-**Windows — PowerShell**
-
-```powershell
-.\setup.ps1
-.\start.ps1
-```
-
-If PowerShell blocks scripts, use these equivalent commands without changing
-your execution policy:
-
-```powershell
 uv run --locked python lecture.py setup
 uv run --locked python lecture.py start
 ```
 
-The start command opens marimo's editor in your browser. Keep the terminal open;
-press Ctrl+C there to stop the server. If the browser doesn't open, use the local
-URL printed in the terminal. For a busy port, use `./start.sh --port 2720` or
-`.\start.ps1 --port 2720`.
+## 2. Solve and save
 
-## Work on the exercises
+The launcher creates **`work/exercises.py`** the first time and opens it in
+marimo's browser editor. Every later launch reopens that same file.
 
-- Edit the `WRITE HERE` sections in `exercises.py` in the marimo editor.
-- Replace `None` with your answer; press **Shift+Enter** to run a cell.
-- Incomplete answers show a reminder. Checks run once answers are filled in.
-  Incorrect answers still produce useful assertion errors.
-- Dependent cells update when you change an answer. marimo allows each global
-  variable to be defined in one cell; `_name` variables are local to a cell.
-- Save with **Ctrl+S**, or **Cmd+S** on macOS. Your work stays in `exercises.py`.
-- Click **Load / download MNIST** when you reach the image section. The first
-  load downloads MNIST; later loads reuse `data/`.
+1. Fill in the `WRITE HERE` blanks. Replace `None` with your answer.
+2. Press **Shift+Enter** to run the cell and its checks.
+3. Save with **Ctrl+S** (macOS: **Cmd+S**).
+4. Run the start command again whenever you want to resume.
 
-The notebook intentionally contains unsolved exercises. A successful setup test
-means the environment and notebook work, not that the exercises are solved.
+Your answers are in `work/exercises.py`, not the tracked `exercises.py` template.
+Setup, restart, and `git pull` do not overwrite that working copy. `work/` is
+Git-ignored: back it up separately if you want to keep your answers elsewhere.
 
-## Worked solutions
+marimo updates dependent cells when values change. Define each global variable
+in only one cell; `_name` variables are local to a cell. Unfinished answers show
+a reminder, and incorrect answers produce assertion errors.
 
-The complete [solution notebook](solution/solutions.py) lives in `solution/`.
-Open it with `./start.sh --solution` or `.\start.ps1 --solution` on Windows.
-It includes all exercises and a two-epoch CPU training loop. The data download
-and training each have a button, so opening it doesn't start a training run.
+Keep the terminal open while working. Stop the server with **Ctrl+C**. If a
+browser doesn't open, follow the local URL in the terminal. For another port,
+use `./start.sh --port 2720` or `.\start.ps1 --port 2720`.
 
-## Test before the lecture
+**VS Code:** install the official [marimo extension](https://marketplace.visualstudio.com/items?itemName=marimo-team.vscode-marimo),
+open `work/exercises.py` as a marimo notebook, and select this bootcamp's `.venv`.
 
-```sh
-./test.sh
-./test.sh --data
-./test.sh --solution
-```
+## 3. Load data when needed
 
-On Windows use `.\test.ps1` and `.\test.ps1 --data`, or on any OS:
+Click **Load / download MNIST** when you reach the image section. It downloads
+once and reuses the cache. Data never needs to be committed or copied into this
+repo. The exercise and solution notebooks share the same cache.
 
-```sh
-uv run --locked python lecture.py test
-uv run --locked python lecture.py test --data
-```
+Typical cache locations:
 
-The basic test checks marimo's dependency graph, runs the blank notebook,
-renders a plot, checks torchvision's compiled extension, and performs a CPU
-training step. `--data` also downloads/verifies MNIST and tests a real image
-batch. Tests don't modify the notebook or fill in student answers.
+- Linux: `~/.cache/relu-education/datasets/`
+- macOS: `~/Library/Caches/relu-education/datasets/`
+- Windows: `%LOCALAPPDATA%\relu-education\Cache\datasets\`
 
-`--solution` runs all 27 worked solutions, including two training epochs on MNIST,
-and checks that validation accuracy exceeds 70%. It also includes the data test.
-Use `.\test.ps1 --solution` on Windows.
-
-To download the data ahead of class without running the tests:
+`./setup.sh` (or `.\setup.ps1`) prints the exact path on your machine.
+To download ahead of class:
 
 ```sh
 uv run --locked python lecture.py data
 ```
 
-All launchers use `uv run --locked`; an out-of-date lockfile causes an error
-instead of silently changing the class environment. No environment activation
-or notebook-kernel selection is needed. After downloading dependencies and
-MNIST, `uv run --offline --locked python lecture.py start` also works offline.
+After dependencies and data are cached, start offline with:
 
-## Source and maintenance
+```sh
+uv run --offline --locked python lecture.py start
+```
 
-Adapted from ReLU NTNU's
-[2025 Bootcamp 1 exercises](https://github.com/ReLU-NTNU/tutorials-25-26/blob/main/notebooks_2025/bootcamp_1/bootcamp_1_exercises.ipynb)
-at commit `2a5a9fdb48549b3a620b7ba3e8bfac6f3d20f5f2`, used here for Bootcamp 2.
-The learning sequence and exercise blanks are preserved. Changes cover marimo
-cell dependencies, clearer unfinished-answer feedback, explicit data loading,
-plot display, and small corrections to inconsistent instructions/checks.
+## Check your setup
 
-Dependencies live in `pyproject.toml`; exact resolutions are committed in
-`uv.lock`. After deliberately changing dependencies, run `uv lock`, then test
-again. CPU PyTorch uses its CPU index on Linux/Windows and PyPI on macOS.
+Run `./test.sh` on macOS/Linux or `.\test.ps1` on Windows. This checks the notebook,
+plotting, CPU training, repository hygiene, and preservation of saved work.
+Add `--data` to also check the MNIST download and a real image batch.
 
-Linux has been tested locally. The PowerShell launchers and macOS installation
-path should also be tested on those systems before class.
+## Solutions and instructor checks
+
+Try the exercises before opening the [worked solutions](solution/README.md).
+Use `./start.sh --solution` (Windows: `.\start.ps1 --solution`) to open a personal
+copy in `work/solutions.py`. The tracked solution stays unchanged.
+
+`./test.sh --solution` runs all 27 solutions and two training epochs.
+Windows equivalent: `.\test.ps1 --solution`.
+
+## Maintenance
+
+The source is ReLU NTNU's [2025 Bootcamp 1 exercises](https://github.com/ReLU-NTNU/tutorials-25-26/blob/main/notebooks_2025/bootcamp_1/bootcamp_1_exercises.ipynb)
+at commit `2a5a9fdb48549b3a620b7ba3e8bfac6f3d20f5f2`, adapted for Bootcamp 2.
+
+Commit teaching source, scripts, docs and `uv.lock`. Do not commit datasets,
+student answers, environments, outputs or model checkpoints. Ignore rules and
+`../scripts/check_repository.py` cover these generated artifacts.
+
+After changing dependencies in `pyproject.toml`, run `uv lock`, then test again.
+Launchers use `--locked` and will reject an out-of-date lockfile. Setup and
+exercise execution are tested on Linux; Windows/macOS still need native testing.

@@ -791,10 +791,10 @@ def _(mo):
 
 @app.cell
 def _(datasets, load_mnist, mo, transforms):
-    mo.stop(not load_mnist.value, mo.md("Click **Load / download MNIST** when you reach this section. The first load needs internet; later loads use the local cache."))
-    from pathlib import Path
+    mo.stop(not load_mnist.value, mo.md("Click **Load / download MNIST** when you reach this section. The first load needs internet; data is stored in your OS cache, outside this repository."))
+    from platformdirs import user_cache_path
 
-    data_dir = Path(__file__).resolve().parent / "data"
+    data_dir = user_cache_path("relu-education", appauthor=False) / "datasets"
     tx = transforms.ToTensor()
     mnist_train = datasets.MNIST(root=str(data_dir), train=True, download=True, transform=tx)
     mnist_test = datasets.MNIST(root=str(data_dir), train=False, download=True, transform=tx)

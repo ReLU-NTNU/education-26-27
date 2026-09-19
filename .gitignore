@@ -4,3 +4,15 @@ Thumbs.db
 __pycache__/
 __marimo__/
 .test-output/
+
+# Student work and generated artifacts, in every lecture folder.
+work/
+data/
+datasets/
+outputs/
+checkpoints/
+.cache/
+*.pt
+*.pth
+*.ckpt
+*.safetensors

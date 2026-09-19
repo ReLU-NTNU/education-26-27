@@ -3,3 +3,4 @@ __pycache__/
 __marimo__/
 data/
 .test-output/
+work/
