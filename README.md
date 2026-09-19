@@ -12,8 +12,8 @@ cd education-26-27/bootcamp_2
 
 | | macOS / Linux | Windows PowerShell |
 |---|---|---|
-| Set up once | `./setup.sh` | `.\setup.ps1` |
-| Start or resume | `./start.sh` | `.\start.ps1` |
+| Set up once | `./scripts/setup.sh` | `.\scripts\setup.ps1` |
+| Start or resume | `./scripts/start.sh` | `.\scripts\start.ps1` |
 
 The launcher opens your personal notebook in marimo. It preserves your answers
 when you restart or update the course.

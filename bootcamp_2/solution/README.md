@@ -8,13 +8,13 @@ in `work/solutions.py` and preserves it on later launches.
 From `bootcamp_2/`, open it with:
 
 ```sh
-./start.sh --solution
+./scripts/start.sh --solution
 ```
 
-On Windows use `.\start.ps1 --solution`. The direct command on any OS is:
+On Windows use `.\scripts\start.ps1 --solution`. The direct command on any OS is:
 
 ```sh
-uv run --locked python lecture.py start --solution
+uv run --locked python scripts/manage.py start --solution
 ```
 
 Click **Load / download MNIST**, then **Train for 2 epochs** to run the final
@@ -23,8 +23,8 @@ section. Re-running training starts from a fresh copy of the untrained model.
 To run every solution and its checks automatically:
 
 ```sh
-./test.sh --solution
+./scripts/test.sh --solution
 ```
 
-On Windows use `.\test.ps1 --solution`. Try the student exercises before looking
+On Windows use `.\scripts\test.ps1 --solution`. Try the student exercises before looking
 at these answers.
