@@ -38,7 +38,8 @@ If PowerShell blocks scripts, use `uv run --locked python scripts/manage.py setu
 and `uv run --locked python scripts/manage.py start` instead.
 
 The first setup installs Python 3.13 and locked dependencies in this folder's
-`.venv`. It needs internet; after installation the workbook can run offline.
+`.venv`. To install or synchronize it directly, run `uv sync --locked` from
+`bootcamp_6/`. It needs internet for installation; afterward the workbook can run offline.
 The launcher opens marimo in your browser. Keep the terminal open; press Ctrl+C
 to stop the server. Use `--port 2720` with the start command if needed.
 
@@ -82,8 +83,7 @@ bootcamp_6/
 ```
 
 Bootcamp 2 retains its existing files, environment, lockfile and commands.
-Bootcamp 7's original Jupyter examples also remain available. This workbook is
-new material for the current lecture, not a conversion of those forest examples.
+This workbook is new material for the current lecture.
 
 Maintainers: run `./scripts/test.sh`. It checks the blank notebook, runs the full
 solution, checks train-only scaling and model results, and verifies that launching

@@ -24,7 +24,6 @@ when you restart or update the course.
 
 - [Bootcamp 2: Python for machine learning](bootcamp_2/README.md)
 - [Bootcamp 6: KNN and single decision trees](bootcamp_6/README.md) — marimo exercises and solutions.
-- [Bootcamp 7: Tree models and hyperparameter optimization](bootcamp_7/README.md) — original Jupyter notebooks.
 - Teaching templates and solutions are versioned in Git.
 - Personal answers live in each bootcamp's ignored `work/` directory.
 - Datasets download on demand to your OS cache **outside this repository**.
