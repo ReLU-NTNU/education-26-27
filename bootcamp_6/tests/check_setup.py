@@ -18,6 +18,7 @@ def load(path, name):
 
 
 def main():
+    subprocess.run([sys.executable, str(ROOT / "tests/check_launchers.py")], check=True)
     import numpy as np
     import matplotlib.pyplot as plt
     from sklearn.metrics import accuracy_score

@@ -18,6 +18,7 @@ app = marimo.App(width="medium")
 @app.cell
 def _():
     import marimo as mo
+
     return (mo,)
 
 
@@ -43,17 +44,36 @@ def _(mo):
 
 @app.cell
 def _():
+    import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
-    import matplotlib.pyplot as plt
     from sklearn.datasets import load_iris
+    from sklearn.metrics import (
+        ConfusionMatrixDisplay,
+        accuracy_score,
+        classification_report,
+    )
     from sklearn.model_selection import train_test_split
+    from sklearn.neighbors import KNeighborsClassifier
     from sklearn.pipeline import make_pipeline
     from sklearn.preprocessing import StandardScaler
-    from sklearn.neighbors import KNeighborsClassifier
     from sklearn.tree import DecisionTreeClassifier, plot_tree
-    from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
-    return ConfusionMatrixDisplay, DecisionTreeClassifier, KNeighborsClassifier, StandardScaler, accuracy_score, classification_report, load_iris, make_pipeline, np, pd, plot_tree, plt, train_test_split
+
+    return (
+        ConfusionMatrixDisplay,
+        DecisionTreeClassifier,
+        KNeighborsClassifier,
+        StandardScaler,
+        accuracy_score,
+        classification_report,
+        load_iris,
+        make_pipeline,
+        np,
+        pd,
+        plot_tree,
+        plt,
+        train_test_split,
+    )
 
 
 @app.cell(hide_code=True)
@@ -84,8 +104,25 @@ def _(load_iris, mo, pd, train_test_split):
     )
     _preview = pd.DataFrame(X_train[:6], columns=iris.feature_names)
     _preview["species"] = iris.target_names[y_train[:6]]
-    mo.vstack([mo.md(f"**Split:** {len(y_train)} train / {len(y_val)} validation / {len(y_test)} test"), _preview])
-    return X_test, X_train, X_trainval, X_val, iris, y_test, y_train, y_trainval, y_val
+    mo.vstack(
+        [
+            mo.md(
+                f"**Split:** {len(y_train)} train / {len(y_val)} validation / {len(y_test)} test"
+            ),
+            _preview,
+        ]
+    )
+    return (
+        X_test,
+        X_train,
+        X_trainval,
+        X_val,
+        iris,
+        y_test,
+        y_train,
+        y_trainval,
+        y_val,
+    )
 
 
 @app.cell(hide_code=True)
@@ -106,7 +143,10 @@ def _(mo):
 def _(mo):
     # WRITE HERE: the majority class, in quotes
     neighbour_vote = None
-    mo.stop(neighbour_vote is None, mo.md("✏️ Replace None with the class receiving the most votes."))
+    mo.stop(
+        neighbour_vote is None,
+        mo.md("✏️ Replace None with the class receiving the most votes."),
+    )
     assert neighbour_vote == "versicolor", "Count how often each species appears."
     mo.md("✅ Two out of three neighbours vote for **versicolor**.")
     return
@@ -132,22 +172,41 @@ def _(mo):
 
 
 @app.cell
-def _(KNeighborsClassifier, StandardScaler, X_train, X_val, accuracy_score, make_pipeline, mo, np, y_train, y_val):
+def _(
+    KNeighborsClassifier,
+    StandardScaler,
+    X_val,
+    accuracy_score,
+    make_pipeline,
+    mo,
+    np,
+    y_val,
+):
     # WRITE HERE: choose five neighbours
     k_start = None
     mo.stop(k_start is None, mo.md("✏️ Start with k_start = 5."))
-    knn_model = make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=k_start))
+    knn_model = make_pipeline(
+        StandardScaler(), KNeighborsClassifier(n_neighbors=k_start)
+    )
     # WRITE HERE: replace None with knn_model.fit(...)
     knn_fitted = None
     mo.stop(knn_fitted is None, mo.md("✏️ Fit using the training features and labels."))
     # WRITE HERE: predict the validation labels
     knn_predictions = None
-    mo.stop(knn_predictions is None, mo.md("✏️ Call predict with the validation features."))
+    mo.stop(
+        knn_predictions is None, mo.md("✏️ Call predict with the validation features.")
+    )
     assert k_start == 5, "Use five neighbours for this starting model."
-    assert np.asarray(knn_predictions).shape == y_val.shape, "Return one prediction per validation flower."
-    assert np.array_equal(knn_predictions, knn_model.predict(X_val)), "Use this model's validation predictions."
-    mo.md(f"✅ KNN validation accuracy: **{accuracy_score(y_val, knn_predictions):.1%}**")
-    return (knn_model,)
+    assert np.asarray(knn_predictions).shape == y_val.shape, (
+        "Return one prediction per validation flower."
+    )
+    assert np.array_equal(knn_predictions, knn_model.predict(X_val)), (
+        "Use this model's validation predictions."
+    )
+    mo.md(
+        f"✅ KNN validation accuracy: **{accuracy_score(y_val, knn_predictions):.1%}**"
+    )
+    return
 
 
 @app.cell(hide_code=True)
@@ -166,7 +225,17 @@ def _(mo):
 
 
 @app.cell
-def _(KNeighborsClassifier, StandardScaler, X_train, X_val, make_pipeline, mo, pd, y_train, y_val):
+def _(
+    KNeighborsClassifier,
+    StandardScaler,
+    X_train,
+    X_val,
+    make_pipeline,
+    mo,
+    pd,
+    y_train,
+    y_val,
+):
     # WRITE HERE: a Python list containing the four requested k values
     k_values = None
     mo.stop(k_values is None, mo.md("✏️ Enter the four k values as a list."))
@@ -175,7 +244,13 @@ def _(KNeighborsClassifier, StandardScaler, X_train, X_val, make_pipeline, mo, p
     for _k in k_values:
         _model = make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=_k))
         _model.fit(X_train, y_train)
-        _rows.append({"k": _k, "training": _model.score(X_train, y_train), "validation": _model.score(X_val, y_val)})
+        _rows.append(
+            {
+                "k": _k,
+                "training": _model.score(X_train, y_train),
+                "validation": _model.score(X_val, y_val),
+            }
+        )
     knn_results = pd.DataFrame(_rows)
     knn_results
     return (knn_results,)
@@ -203,7 +278,7 @@ def _(mo):
 
 
 @app.cell
-def _(DecisionTreeClassifier, X_train, X_val, iris, mo, plot_tree, plt, y_train, y_val):
+def _(DecisionTreeClassifier, X_val, iris, mo, plot_tree, plt, y_val):
     # WRITE HERE: limit this tree to two levels of splits
     tree_depth = None
     mo.stop(tree_depth is None, mo.md("✏️ Start with tree_depth = 2."))
@@ -214,11 +289,25 @@ def _(DecisionTreeClassifier, X_train, X_val, iris, mo, plot_tree, plt, y_train,
     assert tree_depth == 2, "Use depth 2 so the first tree stays easy to read."
     assert tree_model.get_depth() <= 2
     _fig, _ax = plt.subplots(figsize=(11, 5))
-    plot_tree(tree_model, feature_names=iris.feature_names, class_names=list(iris.target_names),
-              filled=True, rounded=True, ax=_ax, fontsize=9)
+    plot_tree(
+        tree_model,
+        feature_names=iris.feature_names,
+        class_names=list(iris.target_names),
+        filled=True,
+        rounded=True,
+        ax=_ax,
+        fontsize=9,
+    )
     _fig.tight_layout()
-    mo.vstack([mo.md(f"Tree validation accuracy: **{tree_model.score(X_val, y_val):.1%}**"), _fig])
-    return (tree_model,)
+    mo.vstack(
+        [
+            mo.md(
+                f"Tree validation accuracy: **{tree_model.score(X_val, y_val):.1%}**"
+            ),
+            _fig,
+        ]
+    )
+    return
 
 
 @app.cell(hide_code=True)
@@ -245,13 +334,20 @@ def _(DecisionTreeClassifier, X_train, X_val, mo, pd, y_train, y_val):
     assert depth_values == [1, 2, 3, 5, None]
     _rows = []
     for _depth in depth_values:
-        _model = DecisionTreeClassifier(max_depth=_depth, random_state=42).fit(X_train, y_train)
-        _rows.append({"depth": "unlimited" if _depth is None else str(_depth),
-                      "leaves": _model.get_n_leaves(), "training": _model.score(X_train, y_train),
-                      "validation": _model.score(X_val, y_val)})
+        _model = DecisionTreeClassifier(max_depth=_depth, random_state=42).fit(
+            X_train, y_train
+        )
+        _rows.append(
+            {
+                "depth": "unlimited" if _depth is None else str(_depth),
+                "leaves": _model.get_n_leaves(),
+                "training": _model.score(X_train, y_train),
+                "validation": _model.score(X_val, y_val),
+            }
+        )
     tree_results = pd.DataFrame(_rows)
     tree_results
-    return (tree_results,)
+    return depth_values, tree_results
 
 
 @app.cell(hide_code=True)
@@ -273,32 +369,98 @@ def _(mo):
 
 
 @app.cell
-def _(ConfusionMatrixDisplay, DecisionTreeClassifier, KNeighborsClassifier, StandardScaler, X_test, X_trainval, accuracy_score, classification_report, depth_values, iris, knn_results, make_pipeline, mo, np, pd, plt, tree_results, y_test, y_trainval):
+def _(
+    ConfusionMatrixDisplay,
+    DecisionTreeClassifier,
+    KNeighborsClassifier,
+    StandardScaler,
+    X_test,
+    X_trainval,
+    accuracy_score,
+    classification_report,
+    depth_values,
+    iris,
+    knn_results,
+    make_pipeline,
+    mo,
+    np,
+    pd,
+    plt,
+    tree_results,
+    y_test,
+    y_trainval,
+):
     # Provided: choose settings without looking at the test labels.
     best_k = int(knn_results.loc[knn_results["validation"].idxmax(), "k"])
     best_depth = depth_values[int(tree_results["validation"].idxmax())]
-    final_knn = make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=best_k)).fit(X_trainval, y_trainval)
-    final_tree = DecisionTreeClassifier(max_depth=best_depth, random_state=42).fit(X_trainval, y_trainval)
+    final_knn = make_pipeline(
+        StandardScaler(), KNeighborsClassifier(n_neighbors=best_k)
+    ).fit(X_trainval, y_trainval)
+    final_tree = DecisionTreeClassifier(max_depth=best_depth, random_state=42).fit(
+        X_trainval, y_trainval
+    )
     # WRITE HERE: predict X_test with each fitted model
     knn_test_predictions = None
     tree_test_predictions = None
-    mo.stop(knn_test_predictions is None or tree_test_predictions is None,
-            mo.md("✏️ Predict X_test with final_knn and final_tree."))
+    mo.stop(
+        knn_test_predictions is None or tree_test_predictions is None,
+        mo.md("✏️ Predict X_test with final_knn and final_tree."),
+    )
     assert np.array_equal(knn_test_predictions, final_knn.predict(X_test))
     assert np.array_equal(tree_test_predictions, final_tree.predict(X_test))
-    test_results = pd.DataFrame({"model": [f"KNN (k={best_k})", f"Tree (depth={best_depth})"],
-                                 "test accuracy": [accuracy_score(y_test, knn_test_predictions), accuracy_score(y_test, tree_test_predictions)]})
+    test_results = pd.DataFrame(
+        {
+            "model": [f"KNN (k={best_k})", f"Tree (depth={best_depth})"],
+            "test accuracy": [
+                accuracy_score(y_test, knn_test_predictions),
+                accuracy_score(y_test, tree_test_predictions),
+            ],
+        }
+    )
     _fig, _axes = plt.subplots(1, 2, figsize=(10, 4))
-    for _ax, _name, _pred in zip(_axes, ["KNN", "Single tree"], [knn_test_predictions, tree_test_predictions]):
-        ConfusionMatrixDisplay.from_predictions(y_test, _pred, labels=[0, 1, 2], display_labels=iris.target_names,
-                                               colorbar=False, ax=_ax, cmap="Blues")
+    for _ax, _name, _pred in zip(
+        _axes, ["KNN", "Single tree"], [knn_test_predictions, tree_test_predictions]
+    ):
+        ConfusionMatrixDisplay.from_predictions(
+            y_test,
+            _pred,
+            labels=[0, 1, 2],
+            display_labels=iris.target_names,
+            colorbar=False,
+            ax=_ax,
+            cmap="Blues",
+        )
         _ax.set_title(_name)
     _fig.tight_layout()
-    _knn_report = pd.DataFrame(classification_report(y_test, knn_test_predictions, target_names=iris.target_names, output_dict=True, zero_division=0)).T
-    _tree_report = pd.DataFrame(classification_report(y_test, tree_test_predictions, target_names=iris.target_names, output_dict=True, zero_division=0)).T
-    mo.vstack([test_results, _fig, mo.md("**KNN classification report**"), _knn_report,
-               mo.md("**Tree classification report**"), _tree_report])
-    return best_depth, best_k, final_knn, final_tree, knn_test_predictions, test_results, tree_test_predictions
+    _knn_report = pd.DataFrame(
+        classification_report(
+            y_test,
+            knn_test_predictions,
+            target_names=iris.target_names,
+            output_dict=True,
+            zero_division=0,
+        )
+    ).T
+    _tree_report = pd.DataFrame(
+        classification_report(
+            y_test,
+            tree_test_predictions,
+            target_names=iris.target_names,
+            output_dict=True,
+            zero_division=0,
+        )
+    ).T
+    mo.vstack(
+        [
+            test_results,
+            _fig,
+            mo.md("**KNN classification report**"),
+            _knn_report,
+            mo.md("**Tree classification report**"),
+            _tree_report,
+        ]
+    )
+    return
 
 
 @app.cell(hide_code=True)
@@ -343,7 +505,16 @@ def _(mo):
 
 
 @app.cell
-def _(KNeighborsClassifier, StandardScaler, X_train, X_val, make_pipeline, pd, y_train, y_val):
+def _(
+    KNeighborsClassifier,
+    StandardScaler,
+    X_train,
+    X_val,
+    make_pipeline,
+    pd,
+    y_train,
+    y_val,
+):
     _rows = []
     for _factor in [1, 10_000]:
         _train = X_train.copy()
@@ -352,11 +523,19 @@ def _(KNeighborsClassifier, StandardScaler, X_train, X_val, make_pipeline, pd, y
         _val[:, 0] *= _factor
         for _name, _model in [
             ("Raw KNN", KNeighborsClassifier(n_neighbors=5)),
-            ("Scaled KNN", make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=5))),
+            (
+                "Scaled KNN",
+                make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=5)),
+            ),
         ]:
             _model.fit(_train, y_train)
-            _rows.append({"sepal length multiplier": _factor, "model": _name,
-                          "validation accuracy": _model.score(_val, y_val)})
+            _rows.append(
+                {
+                    "sepal length multiplier": _factor,
+                    "model": _name,
+                    "validation accuracy": _model.score(_val, y_val),
+                }
+            )
     pd.DataFrame(_rows)
     return
 
@@ -383,9 +562,14 @@ def _(mo):
 def _(mo):
     # WRITE HERE: number of feature-coordinate comparisons for one query
     coordinate_comparisons = None
-    mo.stop(coordinate_comparisons is None, mo.md("✏️ Multiply training examples by features."))
+    mo.stop(
+        coordinate_comparisons is None,
+        mo.md("✏️ Multiply training examples by features."),
+    )
     assert coordinate_comparisons == 4000, "Each of 1,000 distances uses four features."
-    mo.md("✅ 4,000 coordinate comparisons; doubling the training set gives 8,000. This counts coordinates, not exact CPU operations.")
+    mo.md(
+        "✅ 4,000 coordinate comparisons; doubling the training set gives 8,000. This counts coordinates, not exact CPU operations."
+    )
     return
 
 

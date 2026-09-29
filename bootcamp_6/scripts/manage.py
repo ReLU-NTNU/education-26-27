@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 import importlib.metadata
 import os
 from pathlib import Path
@@ -35,8 +36,16 @@ def main() -> int:
     if args.command == "setup":
         for package in ["marimo", "numpy", "pandas", "matplotlib", "scikit-learn"]:
             print(f"{package}: {importlib.metadata.version(package)}")
+        # Check actual imports as well as installed metadata before declaring readiness.
+        for module in ["marimo", "numpy", "pandas", "matplotlib.pyplot", "sklearn"]:
+            importlib.import_module(module)
+        print("Package imports: OK")
         print(f"Your saved notebook: {working_copy(args.solution)}")
-        print("Ready. Run ./scripts/start.sh or .\\scripts\\start.ps1.")
+        print(f"VS Code: open workspace {ROOT / 'bootcamp_6.code-workspace'}")
+        print(f"Notebook kernel: relu-bootcamp-six ({sys.executable})")
+        print("Select it in marimo's kernel picker, then Run All.")
+        print("Check for the Iris table and Split: 90 train / 30 validation / 30 test.")
+        print("Ready. Run ./scripts/start.sh or .\\scripts\\start.cmd.")
         return 0
     if args.command == "test":
         return subprocess.call([sys.executable, str(ROOT / "tests" / "check_setup.py")])

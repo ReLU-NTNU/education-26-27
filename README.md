@@ -1,34 +1,32 @@
 # ReLU education 2026–2027
 
-Each bootcamp has its own folder and setup. For today’s KNN and decision-tree
-workbook, follow [Bootcamp 6](bootcamp_6/README.md). Existing Bootcamp 2 users can
-keep using their current commands and saved work.
+Workbooks and exercises for the ReLU bootcamp. Choose your session:
 
-## Start a bootcamp
+| Session | Topics | Instructions |
+|---|---|---|
+| Bootcamp 2 | Python, NumPy, pandas, plotting and PyTorch | [Open Bootcamp 2](bootcamp_2/README.md) |
+| Bootcamp 6 | K-nearest neighbours, decision trees and evaluation | [Open Bootcamp 6](bootcamp_6/README.md) |
+
+## Get the workbooks
 
 Install [Git](https://git-scm.com/downloads) and
-[uv](https://docs.astral.sh/uv/getting-started/installation/), then:
+[uv](https://docs.astral.sh/uv/getting-started/installation/), then open a terminal:
 
 ```sh
 git clone https://github.com/ReLU-NTNU/education-26-27.git
-cd education-26-27/bootcamp_2
+cd education-26-27
 ```
 
-| | macOS / Linux | Windows PowerShell |
-|---|---|---|
-| Set up once | `./scripts/setup.sh` | `.\scripts\setup.ps1` |
-| Start or resume | `./scripts/start.sh` | `.\scripts\start.ps1` |
+Already have the repository? Open a terminal in its folder and run `git pull`.
+Then follow the instructions for your session above. You can use a browser or,
+for Bootcamp 6, the marimo extension in VS Code.
 
-The launcher opens your personal notebook in marimo. It preserves your answers
-when you restart or update the course.
+## Keep your answers
 
-- [Bootcamp 2: Python for machine learning](bootcamp_2/README.md)
-- [Bootcamp 6: KNN and single decision trees](bootcamp_6/README.md) — marimo exercises and solutions.
-- Teaching templates and solutions are versioned in Git.
-- Personal answers live in each bootcamp's ignored `work/` directory.
-- Datasets download on demand to your OS cache **outside this repository**.
-- Python environments and generated files are local and excluded from Git.
+Use the session's setup or start command to create your personal workbook.
+Your answers are saved in that session's `work/` folder and reopened the next
+time you start. Save with **Ctrl+S** on Windows/Linux or **Cmd+S** on macOS.
 
-Maintainers: run `python scripts/check_repository.py` before committing. It
-rejects tracked datasets, environments, student work, model files and archives.
-Each bootcamp also runs this check as part of its test command.
+Your personal workbook is not uploaded to GitHub. Back up the `work/` folder if
+you want to keep a separate copy. Worked solutions are available in each session;
+try the exercises before checking them.

@@ -1,91 +1,120 @@
-# Bootcamp 6 · KNN and single decision trees
+# Bootcamp 6 · KNN and decision trees
 
-A beginner workbook for the lecture on KNN, decision trees and computational
-complexity. About **40 minutes**, plus two optional extensions. Uses the small
-Iris dataset bundled with scikit-learn; no dataset download or GPU is needed.
+Learn to classify Iris flowers using nearest neighbours and a single decision
+tree. You will fit models, compare their settings and interpret their mistakes.
+Allow about **40 minutes**, with two optional extensions at the end.
 
-- **[Student workbook](exercises/workbook.py)** — explanations, six fill-in exercises,
-  feedback, tree diagrams and confusion matrices.
-- **[Worked solutions](solutions/workbook.py)** — completed code and instructor notes.
+Choose either **a browser** or **VS Code** below. Both use the same workbook and
+save your answers in `bootcamp_6/work/exercises.py`.
 
-## Start today's workbook
+## Before you start
 
-Already cloned this repository? From its root:
+Get the repository using the [course instructions](../README.md) and install
+[uv](https://docs.astral.sh/uv/getting-started/installation/). You do not need to
+install Python separately. The first setup needs internet; the flower dataset
+is included, and no GPU is needed.
 
-```sh
-git pull
-cd bootcamp_6
-```
+The commands below start from the **repository folder**, `education-26-27`.
 
-First-time users can run:
+## Option A: work in your browser
 
-```sh
-git clone https://github.com/ReLU-NTNU/education-26-27.git
-cd education-26-27/bootcamp_6
-```
+Run the command for your computer:
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if needed.
-Then, from `bootcamp_6/`:
+| Computer | Command |
+|---|---|
+| Mac, including Apple Silicon and Intel | `sh bootcamp_6/scripts/start.sh` |
+| Linux | `sh bootcamp_6/scripts/start.sh` |
+| Windows, in PowerShell or Command Prompt | `.\bootcamp_6\scripts\start.cmd` |
 
-| Action | macOS / Linux | Windows PowerShell |
-|---|---|---|
-| Set up once | `./scripts/setup.sh` | `.\scripts\setup.ps1` |
-| Open or resume workbook | `./scripts/start.sh` | `.\scripts\start.ps1` |
-| Open worked solutions | `./scripts/start.sh --solution` | `.\scripts\start.ps1 --solution` |
-| Run checks | `./scripts/test.sh` | `.\scripts\test.ps1` |
+The first run installs the required software and opens marimo in your browser.
+Use the same command to resume later. Keep the terminal open while working;
+press **Ctrl+C** in the terminal to stop it. If the browser does not open, follow
+the local URL printed in the terminal.
 
-If PowerShell blocks scripts, use `uv run --locked python scripts/manage.py setup`
-and `uv run --locked python scripts/manage.py start` instead.
+## Option B: work inside VS Code
 
-The first setup installs Python 3.13 and locked dependencies in this folder's
-`.venv`. To install or synchronize it directly, run `uv sync --locked` from
-`bootcamp_6/`. It needs internet for installation; afterward the workbook can run offline.
-The launcher opens marimo in your browser. Keep the terminal open; press Ctrl+C
-to stop the server. Use `--port 2720` with the start command if needed.
+1. **Prepare the workbook.** From the repository folder, run
+   `sh bootcamp_6/scripts/setup.sh` on macOS/Linux or
+   `.\bootcamp_6\scripts\setup.cmd` on Windows. This installs the environment and
+   creates your personal copy without opening a browser.
+2. In VS Code, choose **File → Open Workspace from File…** and open
+   [`bootcamp_6.code-workspace`](bootcamp_6.code-workspace) in this folder.
+   The window title should include **bootcamp_6 (Workspace)**. Opening the whole
+   repository can leave this session's environment out of the kernel picker.
+3. Install the recommended **Python** extension from Microsoft and
+   [**marimo**](https://marketplace.visualstudio.com/items?itemName=marimo-team.vscode-marimo).
+4. Open **`work/exercises.py`** in the Explorer. If it is hidden, use
+   **File → Open File…** and browse to it. Use **marimo: Open as marimo notebook**
+   from the Command Palette if it opens as plain Python text.
+5. Click the notebook's **kernel picker** at the top right. Choose **marimo** if
+   asked for a source, then **relu-bootcamp-six (Python 3.13.x)**. Check that its
+   path is inside `bootcamp_6/.venv`. The patch version may differ.
+   **Changing Python in the bottom status bar does not switch marimo's kernel.**
+6. Click **Run All**. Before starting the exercises, check that the imports run
+   without errors and you see an Iris flower table with
+   **“Split: 90 train / 30 validation / 30 test”**. Reminders about unfinished
+   exercises are expected until you fill in the answers.
 
-## Work and save
+### If the project kernel is missing
 
-The launcher creates `work/exercises.py` once and reopens it on later launches.
-Replace `None` at the `WRITE HERE` comments, run the cell with Shift+Enter, and
-save with Ctrl+S / Cmd+S. Unfinished exercises show a reminder instead of an error.
-Cells depending on an unfinished answer wait until it is completed.
+1. Check the window title: open `bootcamp_6.code-workspace` using step 2 above
+   if you are still in the whole repository.
+2. In that workspace, choose **Terminal → Run Task… → Bootcamp 6: Setup**.
+   Wait for it to finish successfully. This preserves your existing answers.
+3. Run **Developer: Reload Window** from the Command Palette, reopen the
+   notebook and select its kernel again.
+4. If it is still missing, run **Python: Select Interpreter → Enter interpreter
+   path…** and browse to the following file, then return to **marimo's kernel
+   picker** and select the same environment:
 
-Solutions open separately as `work/solutions.py`. Setup and start never overwrite
-an existing working copy, including after a template update. Personal files under
-`work/` are Git-ignored: back them up separately. To adopt a newer template, first
-rename your personal notebook to a backup, then run start again.
+| Computer | Interpreter, relative to `bootcamp_6/` |
+|---|---|
+| macOS / Linux | `.venv/bin/python` |
+| Windows | `.venv\Scripts\python.exe` |
 
-## What students do
+Use the project environment above for this workbook. **marimo sandbox** uses a
+separate environment; the other Python versions in the list may not have the
+required packages. If you cannot get the project kernel to appear, the browser
+command in Option A opens the same saved workbook using the prepared environment.
 
-1. Predict a class from a three-neighbour vote.
-2. Fit a scaled KNN pipeline and predict validation labels.
-3. Compare four values of k using training and validation accuracy.
-4. Fit a shallow tree and trace a prediction through its diagram.
-5. Compare tree depths and look for overfitting.
-6. Compare the selected models on a held-out test set and interpret errors.
+## Solve and save
 
-Optional: explore the effect of changing feature units and count the work in
-brute-force KNN distance computation. The workbook uses a fixed stratified
-train/validation/test split and fits scaling only on the appropriate training data.
+Replace `None` beside each **WRITE HERE** comment, then press **Shift+Enter**.
+A reminder means an exercise is unfinished; dependent cells wait for its answer.
+Read the prompts above each cell and use the results to answer the discussion
+questions. Save with **Ctrl+S** / **Cmd+S**.
 
-## Repository layout and compatibility
+The six exercises cover:
 
-```text
-bootcamp_6/
-├── exercises/workbook.py
-├── solutions/workbook.py
-├── scripts/                 Setup, launch and test commands
-├── tests/check_setup.py
-├── pyproject.toml
-├── uv.lock
-├── .venv/                   Local environment, ignored
-└── work/                    Personal notebooks, ignored
-```
+1. Predicting a class from a neighbour vote.
+2. Fitting KNN and predicting validation labels.
+3. Comparing different numbers of neighbours.
+4. Fitting a small decision tree and reading its diagram.
+5. Comparing shallow and deep trees.
+6. Evaluating both models on unseen flowers.
 
-Bootcamp 2 retains its existing files, environment, lockfile and commands.
-This workbook is new material for the current lecture.
+The extensions explore feature scaling and the amount of work needed for a
+prediction.
 
-Maintainers: run `./scripts/test.sh`. It checks the blank notebook, runs the full
-solution, checks train-only scaling and model results, and verifies that launching
-again preserves saved answers. Tested on macOS; PowerShell launchers follow the
-existing Bootcamp 2 pattern but have not been run on Windows.
+## Check the solutions
+
+Try the workbook first. To open the [worked solutions](solutions/workbook.py) in
+your browser, add `--solution` to the start command. For VS Code, add `--solution`
+to the setup command, then open `work/solutions.py` and select the same `.venv`
+kernel. Your exercise answers stay in their own file.
+
+## If something does not work
+
+- **“uv not found”:** install uv using the link above, reopen your terminal and retry.
+- **“No module named …” in VS Code:** follow [the project-kernel steps](#if-the-project-kernel-is-missing)
+  above. Check the notebook kernel, even if the status bar shows the right Python.
+- **You only see Python code:** use **marimo: Open as marimo notebook**.
+- **The browser port is occupied:** add `--port 2720` to the start command.
+
+For a setup check, run `sh bootcamp_6/scripts/test.sh` on macOS/Linux or
+`.\bootcamp_6\scripts\test.cmd` on Windows from the repository folder. Share the
+error message with your instructor if it fails.
+
+Always work in `work/exercises.py`. The files in `exercises/` are the original
+templates. Setup and start preserve existing personal files, and your answers
+are not uploaded to GitHub. Back up your `work/` folder separately.
