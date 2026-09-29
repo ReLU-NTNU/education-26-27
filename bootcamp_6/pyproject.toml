@@ -1,0 +1,15 @@
+[project]
+name = "relu-bootcamp-six"
+version = "0.1.0"
+description = "KNN and single decision trees: a beginner marimo workbook"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "marimo==0.24.2",
+    "matplotlib>=3.10,<4",
+    "numpy>=2.3,<3",
+    "pandas>=2.3,<4",
+    "scikit-learn>=1.7,<2",
+]
+
+[tool.uv]
+package = false

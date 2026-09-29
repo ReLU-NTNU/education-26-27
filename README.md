@@ -1,7 +1,8 @@
 # ReLU education 2026–2027
 
-The exercise notebook is at [`bootcamp_2/exercises.py`](bootcamp_2/exercises.py). Bootcamp setup scripts,
-tests and solutions live in `bootcamp_2/`.
+Each bootcamp has its own folder and setup. For today’s KNN and decision-tree
+workbook, follow [Bootcamp 6](bootcamp_6/README.md). Existing Bootcamp 2 users can
+keep using their current commands and saved work.
 
 ## Start a bootcamp
 
@@ -22,6 +23,7 @@ The launcher opens your personal notebook in marimo. It preserves your answers
 when you restart or update the course.
 
 - [Bootcamp 2: Python for machine learning](bootcamp_2/README.md)
+- [Bootcamp 6: KNN and single decision trees](bootcamp_6/README.md) — marimo exercises and solutions.
 - [Bootcamp 7: Tree models and hyperparameter optimization](bootcamp_7/README.md) — original Jupyter notebooks.
 - Teaching templates and solutions are versioned in Git.
 - Personal answers live in each bootcamp's ignored `work/` directory.
