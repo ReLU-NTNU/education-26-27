@@ -2,7 +2,7 @@
 
 Learn to classify Iris flowers using nearest neighbours and a single decision
 tree. You will fit models, compare their settings and interpret their mistakes.
-Allow about **40 minutes**, with two optional extensions at the end.
+Allow about **55 minutes**, with two optional extensions at the end.
 
 Choose either **a browser** or **VS Code** below. Both use the same workbook and
 save your answers in `bootcamp_6/work/exercises.py`.
@@ -84,14 +84,15 @@ A reminder means an exercise is unfinished; dependent cells wait for its answer.
 Read the prompts above each cell and use the results to answer the discussion
 questions. Save with **Ctrl+S** / **Cmd+S**.
 
-The six exercises cover:
+The seven exercises cover:
 
 1. Predicting a class from a neighbour vote.
-2. Fitting KNN and predicting validation labels.
-3. Comparing different numbers of neighbours.
-4. Fitting a small decision tree and reading its diagram.
-5. Comparing shallow and deep trees.
-6. Evaluating both models on unseen flowers.
+2. Implementing KNN: distances, nearest neighbours, labels and a three-class vote.
+3. Fitting scikit-learn KNN and predicting validation labels.
+4. Comparing different numbers of neighbours.
+5. Fitting a small decision tree and reading its diagram.
+6. Comparing shallow and deep trees.
+7. Evaluating both models on unseen flowers.
 
 The extensions explore feature scaling and the amount of work needed for a
 prediction.
@@ -118,3 +119,7 @@ error message with your instructor if it fails.
 Always work in `work/exercises.py`. The files in `exercises/` are the original
 templates. Setup and start preserve existing personal files, and your answers
 are not uploaded to GitHub. Back up your `work/` folder separately.
+
+To start an updated workbook after a course update, rename your existing
+`work/exercises.py` to a backup such as `exercises_previous.py`, then run setup
+again. Setup preserves existing files, so it does not replace your saved answers.
