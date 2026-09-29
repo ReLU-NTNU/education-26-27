@@ -22,6 +22,7 @@ The launcher opens your personal notebook in marimo. It preserves your answers
 when you restart or update the course.
 
 - [Bootcamp 2: Python for machine learning](bootcamp_2/README.md)
+- [Bootcamp 6: Logistic regression and Naive Bayes examples](bootcamp_6/README.md) — original Jupyter notebooks; adaptation pending.
 - Teaching templates and solutions are versioned in Git.
 - Personal answers live in each bootcamp's ignored `work/` directory.
 - Datasets download on demand to your OS cache **outside this repository**.
