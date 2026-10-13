@@ -138,7 +138,7 @@ def _(mo):
 
 
 @app.cell
-def _(load_digits, pd, train_test_split):
+def _(load_digits, mo, pd, train_test_split):
     # Load all pixel rows and the corresponding correct digit labels.
     X, y = load_digits(return_X_y=True)
 
@@ -160,7 +160,7 @@ def _(load_digits, pd, train_test_split):
         columns=[f"Pixel {_pixel}" for _pixel in range(8)],
     )
     data_preview["Correct digit"] = y_train[:5]
-    data_preview
+    mo.Html(data_preview.to_html(index=False))
     return X_test, X_train, y_test, y_train
 
 
@@ -347,7 +347,9 @@ def _(GridSearchCV, RandomForestClassifier, mo, pd):
         "mean_test_score": "Mean validation accuracy",
         "std_test_score": "Variation between fold scores",
     })
-    grid_results.sort_values("Mean validation accuracy", ascending=False)
+    mo.Html(
+        grid_results.sort_values("Mean validation accuracy", ascending=False).to_html(index=False)
+    )
     return grid_search, search_forest
 
 
@@ -451,7 +453,7 @@ def _(
             "Mean validation accuracy": random_search.best_score_,
         },
     ])
-    cv_comparison
+    mo.Html(cv_comparison.to_html(index=False))
     return (random_search,)
 
 
@@ -531,7 +533,7 @@ def _(
         {"Model": "Baseline", "Test accuracy": baseline_test_accuracy},
         {"Model": "Chosen tuned forest", "Test accuracy": tuned_test_accuracy},
     ])
-    test_results
+    mo.Html(test_results.to_html(index=False))
     return
 
 
