@@ -25,29 +25,63 @@ def _():
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    # Bootcamp 8 · Hyperparameter optimization
+    # Bootcamp 8 · Choosing settings for a random forest
 
-    **Worked solutions.** The same random-forest exercises with complete code
-    and discussion answers. Try the student version first.
+    ## Worked solutions
 
-    Adapted from `notebooks_2025/bootcamp_7/Hyperparameter Optimization.ipynb`
-    in `ReLU-NTNU/tutorials-25-26`. This keeps its baseline, grid search,
-    random search and pipeline flow. Test evaluation is grouped after CV-based
-    selection; the numerical digits do not need categorical target encoding.
+    **All code is complete.** Run all cells to see the results; no edits are
+    needed. Read the comments alongside the code and the explanations after each
+    task. Try the exercise workbook before using this one to check your answers.
+
+    We fit a baseline forest to handwritten digits, compare settings using
+    cross-validation, select a model, and evaluate it on unseen test images.
+    The pipeline section is an optional extension.
+
+    The setup below should show sample images and
+    **“Split: 1437 training / 360 test”**. The searches fit many forests, so
+    allow a few minutes for all results. No GPU or dataset download is needed.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### Reading the code
+
+    | Code | Meaning |
+    |---|---|
+    | `model = RandomForestClassifier(...)` | Create an unfitted model with chosen settings. |
+    | `model.fit(X_train, y_train)` | Learn from the training features and their correct labels. |
+    | `model.predict(X_new)` | Predict labels for new feature rows. |
+    | `accuracy_score(correct_labels, predictions)` | Fraction of labels predicted correctly: 0.9 means 90%. |
+    | `scores.mean()` | Average the numbers in an array of scores. |
+
+    A **hyperparameter** is a setting we choose, such as maximum tree depth.
+    The tree's split rules are learned during `.fit()`.
+
+    The imports and data preparation below are provided. Run them as they are.
     """)
     return
 
 
 @app.cell
 def _():
+    import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
+
+    # These distributions describe which settings random search may sample.
     from scipy.stats import randint, uniform
+
     from sklearn.datasets import load_digits
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.metrics import accuracy_score
     from sklearn.model_selection import (
-        GridSearchCV, RandomizedSearchCV, cross_val_score, train_test_split,
+        GridSearchCV,
+        RandomizedSearchCV,
+        cross_val_score,
+        train_test_split,
     )
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
@@ -63,63 +97,146 @@ def _():
         load_digits,
         np,
         pd,
+        plt,
         randint,
         train_test_split,
         uniform,
     )
 
 
-@app.cell
-def _(load_digits, pd, train_test_split):
-    X, y = load_digits(return_X_y=True)
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, stratify=y, random_state=42,
-    )
-    print(f"Split: {len(y_train)} training / {len(y_test)} test")
-    pd.DataFrame(X_train[:5]).assign(digit=y_train[:5])
-    return X_test, X_train, y_test, y_train
-
-
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## 1 · Fit a baseline random forest
+    ### What are X and y?
 
-    Create a `RandomForestClassifier` with `n_estimators=100`, `max_depth=5`,
-    `min_samples_leaf=2`, and `random_state=42`. Fit it on `X_train, y_train`.
+    One example is an **8×8 image of a handwritten digit**. Each pixel contains
+    a brightness value between 0 and 16. Flattening the image gives 64 input
+    features, so one row of `X` contains 64 numbers. Its matching entry in `y`
+    is the correct digit, from 0 to 9.
 
-    Then use `cross_val_score` with the baseline, `X_train`, `y_train`, `cv=5`
-    and `scoring="accuracy"`. Inspect the five scores and their average.
-    `cross_val_score` fits a fresh copy for each fold; the fitted baseline will
-    also be used for the final test comparison.
+    We split the examples before fitting anything:
 
-    **Discuss:** Which settings are hyperparameters? What does each one control?
-    Why do we keep the test data out of cross-validation?
+    - **Training set:** learn the model and choose its settings using CV.
+    - **Test set:** check the chosen model at the end. Do not use it in searches.
+
+    `stratify=y` keeps similar digit proportions in both sets. `random_state=42`
+    makes the split repeatable, so your results can be compared with the solutions.
     """)
     return
 
 
 @app.cell
-def _(RandomForestClassifier, X_train, cross_val_score, mo, np, y_train):
-    rf_baseline = RandomForestClassifier(n_estimators=100, max_depth=5, min_samples_leaf=2, random_state=42)  # WRITE HERE: create the forest with the specified settings.
-    mo.stop(rf_baseline is None, mo.md("Create rf_baseline."))
-    baseline_fitted = rf_baseline.fit(X_train, y_train)  # WRITE HERE: rf_baseline.fit on training data.
-    mo.stop(baseline_fitted is None, mo.md("Fit the baseline on X_train, y_train."))
-    baseline_cv_scores = cross_val_score(rf_baseline, X_train, y_train, cv=5, scoring="accuracy")  # WRITE HERE: cross_val_score with five folds.
-    mo.stop(baseline_cv_scores is None, mo.md("Cross-validate the baseline on training data."))
-    print("Fold accuracies:", np.round(baseline_cv_scores, 4))
-    print(f"Mean CV accuracy: {baseline_cv_scores.mean():.4f}")
+def _(load_digits, pd, train_test_split):
+    # Load all pixel rows and the corresponding correct digit labels.
+    X, y = load_digits(return_X_y=True)
+
+    # Reserve 20% of the examples for the final test; keep the other 80% for training.
+    X_train, X_test, y_train, y_test = train_test_split(
+        X,
+        y,
+        test_size=0.2,
+        stratify=y,
+        random_state=42,
+    )
+
+    print(f"Split: {len(y_train)} training / {len(y_test)} test")
+    print(f"Each image has {X_train.shape[1]} pixel features.")
+
+    # Show the first eight pixels of five images, followed by their correct labels.
+    data_preview = pd.DataFrame(
+        X_train[:5, :8],
+        columns=[f"Pixel {_pixel}" for _pixel in range(8)],
+    )
+    data_preview["Correct digit"] = y_train[:5]
+    data_preview
+    return X_test, X_train, y_test, y_train
+
+
+@app.cell
+def _(X_train, plt, y_train):
+    # Reshape four training rows back into images to see what the model receives.
+    digit_figure, _axes = plt.subplots(1, 4, figsize=(8, 2))
+    for _axis, _pixels, _label in zip(_axes, X_train[:4], y_train[:4]):
+        _axis.imshow(_pixels.reshape(8, 8), cmap="gray", vmin=0, vmax=16)
+        _axis.set_title(f"Correct digit: {_label}")
+        _axis.axis("off")
+    digit_figure.tight_layout()
+    digit_figure
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### How five-fold cross-validation works
+
+    Split the **training set** into five groups. Fit a fresh model on four groups
+    and score it on the fifth. Repeat until every group has taken a turn as the
+    validation group. This gives five validation accuracies; we compare their mean.
+
+    `cross_val_score(model, X_train, y_train, cv=5, scoring="accuracy")` does
+    those fits and returns the five scores. It fits fresh copies, so you do not
+    need to fit the model first to cross-validate it. With this classifier, the
+    folds approximately preserve the class proportions.
+
+    **The test set is not one of these five groups.** It stays separate throughout.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## 1 · Train a baseline forest
+
+    The baseline averages 100 trees, limits their depth to 5, and requires at
+    least two examples per leaf. We fit one forest on all training data for the
+    eventual test comparison, then cross-validate fresh copies to assess these
+    settings. The fitted baseline is not changed by `cross_val_score`.
+    """)
+    return
+
+
+@app.cell
+def _(RandomForestClassifier, X_train, cross_val_score, np, y_train):
+    forest_depth = 5
+
+    # Creating a model sets its options; it has not learned from any images yet.
+    rf_baseline = RandomForestClassifier(
+        n_estimators=100,
+        max_depth=forest_depth,
+        min_samples_leaf=2,
+        random_state=42,
+    )
+
+    # Learn tree split rules from the labelled training images.
+    baseline_fitted = rf_baseline.fit(X_train, y_train)
+
+    # Each fold fits a new forest and measures accuracy on that fold's validation rows.
+    baseline_cv_scores = cross_val_score(
+        rf_baseline,
+        X_train,
+        y_train,
+        cv=5,
+        scoring="accuracy",
+    )
+
+    print("Five validation accuracies:", np.round(baseline_cv_scores, 4))
+    print(f"Average validation accuracy: {baseline_cv_scores.mean():.4f}")
     return baseline_cv_scores, rf_baseline
 
 
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    **Answer:** `n_estimators` controls the number of trees, `max_depth` limits
-    each tree's depth, and `min_samples_leaf` sets the minimum number of training
-    examples in a leaf. These are chosen settings, not learned split locations.
-    The seed makes the experiment repeatable. Test data must stay separate from
-    the data used to choose settings so we can assess the chosen model fairly.
+    **Worked explanation:** the mean is a **CV validation accuracy**. Every
+    score comes from images withheld from that fold's fit, and no test images
+    were used. With these settings you should get roughly 0.95 average accuracy.
+
+    Deeper trees can represent more complicated patterns and may reduce bias.
+    They can also follow accidental details of their training sample, increasing
+    prediction variance. Averaging trees helps reduce that variation. We use
+    validation scores to investigate whether changing settings helps in this task.
     """)
     return
 
@@ -127,56 +244,72 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## 2 · Grid search
+    ## 2 · Try every combination with grid search
 
-    The unfitted forest `rf` is provided. Complete the search grid:
-
-    - `n_estimators`: **[100, 200, 300]**
-    - `max_depth`: **[5, 10, None]**
-    - `min_samples_leaf`: **[1, 2, 4]**
-
-    Here `None` inside the depth list means no depth limit.
-    Create `GridSearchCV` with `rf`, `param_grid`, `scoring="accuracy"`, and
-    `cv=5`. Fit it on training data. Keep the default `refit=True`: after CV,
-    it fits the best settings on all training data.
-
-    **Before running:** how many settings and fold fits are there? The original
-    grid has 27 settings and can take a few minutes. If you need a shorter run,
-    use `[100]` for `n_estimators` and state that you reduced the search.
-
-    **Discuss:** Does `mean_test_score` in `cv_results_` refer to our reserved
-    `X_test`? What effect can tree depth have on bias and variance?
+    The dictionary contains three choices for each of three hyperparameters.
+    Grid search tests all 27 combinations using the same five folds. It selects
+    by mean validation accuracy and refits the winning settings on all training
+    data, ready to make predictions later.
     """)
     return
 
 
 @app.cell
-def _(GridSearchCV, RandomForestClassifier, X_train, mo, pd, y_train):
-    rf = RandomForestClassifier(random_state=42)
-    param_grid = {"n_estimators": [100, 200, 300], "max_depth": [5, 10, None], "min_samples_leaf": [1, 2, 4]}  # WRITE HERE: dictionary with the three lists above.
-    mo.stop(param_grid is None, mo.md("Complete param_grid."))
-    grid_search = GridSearchCV(rf, param_grid, scoring="accuracy", cv=5)  # WRITE HERE: GridSearchCV with accuracy and five folds.
-    mo.stop(grid_search is None, mo.md("Create grid_search."))
-    grid_fitted = grid_search.fit(X_train, y_train)  # WRITE HERE: fit the grid search using training data.
-    mo.stop(grid_fitted is None, mo.md("Fit grid_search on X_train, y_train."))
-    print("Best hyperparameters (grid):", grid_search.best_params_)
-    print(f"Best CV accuracy: {grid_search.best_score_:.4f}")
-    grid_results = pd.DataFrame(grid_search.cv_results_)[[
-        "params", "mean_test_score", "std_test_score",
-    ]].sort_values("mean_test_score", ascending=False)
-    grid_results
-    return grid_search, rf
+def _(GridSearchCV, RandomForestClassifier, X_train, pd, y_train):
+    depth_options = [5, 10, None]
+
+    leaf_options = [1, 2, 4]
+
+    # Each dictionary key names a forest setting; its list gives the choices to try.
+    param_grid = {
+        "n_estimators": [100, 200, 300],
+        "max_depth": depth_options,
+        "min_samples_leaf": leaf_options,
+    }
+
+    # This unfitted forest is a template: the search creates a fresh copy for each fit.
+    search_forest = RandomForestClassifier(random_state=42)
+    grid_search = GridSearchCV(
+        estimator=search_forest,
+        param_grid=param_grid,
+        scoring="accuracy",
+        cv=5,
+        refit=True,
+    )
+
+    # Fit and validate every combination, then refit the winner on all training rows.
+    grid_fitted = grid_search.fit(X_train, y_train)
+
+    print("Best grid settings:")
+    for _setting, _value in grid_search.best_params_.items():
+        print(f"  {_setting}: {_value}")
+    print(f"Best average validation accuracy: {grid_search.best_score_:.4f}")
+
+    # Give sklearn's CV result columns clearer names for the displayed table.
+    grid_results = pd.DataFrame(grid_search.cv_results_)[
+        ["params", "mean_test_score", "std_test_score"]
+    ].rename(columns={
+        "params": "Settings",
+        "mean_test_score": "Mean validation accuracy",
+        "std_test_score": "Variation between fold scores",
+    })
+    grid_results.sort_values("Mean validation accuracy", ascending=False)
+    return grid_search, search_forest
 
 
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    **Answer:** 3×3×3 = 27 settings, 27×5 = 135 fold fits, then one refit.
-    `mean_test_score` is the mean CV validation score, not the reserved test
-    accuracy. Deeper trees can fit more complex patterns and reduce bias, but
-    can become more sensitive to the training sample and increase variance.
-    Averaging trees reduces that variation; it does not guarantee zero variance.
-    The SD of fold scores is not prediction variance at a fixed input.
+    **Worked explanation:** 3×3×3 = **27 combinations**. Each needs five fold
+    fits: 27×5 = 135. The final refit adds one, giving **136 fitted forests**.
+    With the supplied split and locked environment, the winning settings are
+    **200 trees, no depth limit, and one example per leaf**. Their mean validation
+    accuracy is about **0.9763**, compared with the baseline's **0.9471**.
+
+    Sklearn uses `test` to mean the held-out part **inside a CV fold** in this
+    column name. It does not refer to our separate test set. The fold-score
+    standard deviation describes variation in validation scores; it is not the
+    prediction variance at a fixed input from the bias–variance equation.
     """)
     return
 
@@ -184,18 +317,12 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## 3 · Random search
+    ## 3 · Sample settings with random search
 
-    The original search distributions are provided. `randint(a, b)` draws
-    integers from `a` through `b-1`; `uniform(0.3, 0.7)` draws feature fractions
-    between 0.3 and 1.0.
-
-    Create `RandomizedSearchCV` using `rf`, `param_distributions=param_range`,
-    `n_iter=10`, `cv=5`, `scoring="accuracy"`, and `random_state=42`.
-    Fit it on training data and compare the best CV scores.
-
-    **Discuss:** How many fold fits does random search use? Why might it miss
-    the best setting? Is this a fair comparison of the two search strategies?
+    We sample ten combinations from the distributions below rather than checking
+    every possible combination. Each gets the same five-fold validation as the
+    grid search. The best sampled setting is then refitted on all training data.
+    The random seed fixes the sampled choices so we can reproduce the comparison.
     """)
     return
 
@@ -206,31 +333,57 @@ def _(
     X_train,
     baseline_cv_scores,
     grid_search,
-    mo,
     pd,
     randint,
-    rf,
+    search_forest,
     uniform,
     y_train,
 ):
+    # These ranges define the settings random search is allowed to try.
     param_range = {
-        "n_estimators": randint(50, 501),
-        "max_depth": randint(1, 21),
-        "min_samples_split": randint(2, 11),
-        "min_samples_leaf": randint(1, 6),
-        "max_features": uniform(0.3, 0.7),
-        "bootstrap": [True, False],
+        "n_estimators": randint(50, 501),     # Between 50 and 500 trees.
+        "max_depth": randint(1, 21),          # Maximum depth between 1 and 20.
+        "min_samples_split": randint(2, 11),  # At least 2–10 examples to split a node.
+        "min_samples_leaf": randint(1, 6),    # At least 1–5 examples in a leaf.
+        "max_features": uniform(0.3, 0.7),    # Fraction of features considered at a split.
+        "bootstrap": [True, False],          # Bootstrap each tree's rows, or use all training rows.
     }
-    random_search = RandomizedSearchCV(rf, param_distributions=param_range, n_iter=10, cv=5, scoring="accuracy", random_state=42)  # WRITE HERE: RandomizedSearchCV with ten sampled settings.
-    mo.stop(random_search is None, mo.md("Create random_search."))
-    random_fitted = random_search.fit(X_train, y_train)  # WRITE HERE: fit the random search using training data.
-    mo.stop(random_fitted is None, mo.md("Fit random_search on X_train, y_train."))
-    print("Best hyperparameters (random):", random_search.best_params_)
-    print(f"Best CV accuracy: {random_search.best_score_:.4f}")
+
+    # Set a fixed search budget: ten sampled combinations, each checked on five folds.
+    random_trials = 10
+
+    random_search = RandomizedSearchCV(
+        estimator=search_forest,
+        param_distributions=param_range,
+        n_iter=random_trials,
+        scoring="accuracy",
+        cv=5,
+        refit=True,
+        random_state=42,
+    )
+
+    # Fit the sampled candidates, choose by validation accuracy, and refit the winner.
+    random_fitted = random_search.fit(X_train, y_train)
+
+    print("Best random-search settings:")
+    for _setting, _value in random_search.best_params_.items():
+        print(f"  {_setting}: {_value}")
+    print(f"Best average validation accuracy: {random_search.best_score_:.4f}")
+
+    # Compare methods using validation scores; the final test data is still untouched.
     cv_comparison = pd.DataFrame([
-        {"Method": "Baseline", "Mean CV accuracy": baseline_cv_scores.mean()},
-        {"Method": "Grid search", "Mean CV accuracy": grid_search.best_score_},
-        {"Method": "Random search", "Mean CV accuracy": random_search.best_score_},
+        {
+            "Method": "Baseline",
+            "Mean validation accuracy": baseline_cv_scores.mean(),
+        },
+        {
+            "Method": "Grid search",
+            "Mean validation accuracy": grid_search.best_score_,
+        },
+        {
+            "Method": "Random search",
+            "Mean validation accuracy": random_search.best_score_,
+        },
     ])
     cv_comparison
     return (random_search,)
@@ -239,10 +392,16 @@ def _(
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    **Answer:** Ten sampled settings give 50 fold fits and one refit. Sampling
-    can explore a large space cheaply, but can miss good settings. These searches
-    use different spaces and budgets, so a better score here does not establish
-    that either strategy is generally superior. Both use the same five folds.
+    **Worked explanation:** ten candidates need **50 fold fits**, followed by
+    one final refit. Another sample could find a better or worse combination.
+    With the supplied seed, the winning sample uses **413 trees**, maximum depth
+    **12**, minimum split size **4**, minimum leaf size **3**, a feature fraction
+    of about **0.316**, and **no bootstrap sampling**. Its mean validation score
+    is about **0.9728**, slightly below grid search's **0.9763**.
+
+    This comparison uses different spaces and budgets: grid search tests 27
+    combinations, random search samples ten from a broader space. Its result
+    does not establish that either search strategy is generally better.
     """)
     return
 
@@ -250,16 +409,11 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## Use the test set after choosing the model
+    ## Choose a model, then check the test set
 
-    Choose the search with the higher `best_score_`; use grid search for a tie.
-    Complete `chosen_search`, and predict the reserved test data using its
-    `best_estimator_`. Both searches already refit their winner on all training
-    data. The supplied code compares it with the fitted baseline.
-
-    **Before filling in the predictions:** record your chosen settings and why
-    you selected them. Inspect these final test accuracies once; do not change
-    the model or search settings in response to the test result.
+    We choose the search with the higher mean validation score, using grid search
+    to break a tie. Its `best_estimator_` is already trained on all training rows.
+    Only now do we predict the test images and compare against their labels.
     """)
     return
 
@@ -269,20 +423,37 @@ def _(
     X_test,
     accuracy_score,
     grid_search,
-    mo,
     pd,
     random_search,
     rf_baseline,
     y_test,
 ):
-    chosen_search = grid_search if grid_search.best_score_ >= random_search.best_score_ else random_search  # WRITE HERE: select by best CV score, grid wins ties.
-    mo.stop(chosen_search is None, mo.md("Choose a search using CV scores only."))
+    selected_method = (
+        "grid"
+        if grid_search.best_score_ >= random_search.best_score_
+        else "random"
+    )
+
+    # Look up the already-refitted winning forest from the selected search.
+    if selected_method == "grid":
+        chosen_search = grid_search
+    else:
+        chosen_search = random_search
     best_rf = chosen_search.best_estimator_
-    test_predictions = best_rf.predict(X_test)  # WRITE HERE: best_rf.predict on X_test, after choosing.
-    mo.stop(test_predictions is None, mo.md("Record your choice, then predict X_test."))
+
+    print("Chosen settings:")
+    for _setting, _value in chosen_search.best_params_.items():
+        print(f"  {_setting}: {_value}")
+
+    # Predict unseen labels without fitting or changing the already-selected model.
+    test_predictions = best_rf.predict(X_test)
+
+    # Calculate the fraction of correct labels on the separate test set.
+    tuned_test_accuracy = accuracy_score(y_test, test_predictions)
+    baseline_test_accuracy = rf_baseline.score(X_test, y_test)
     test_results = pd.DataFrame([
-        {"Model": "Baseline", "Test accuracy": rf_baseline.score(X_test, y_test)},
-        {"Model": "Chosen tuned forest", "Test accuracy": accuracy_score(y_test, test_predictions)},
+        {"Model": "Baseline", "Test accuracy": baseline_test_accuracy},
+        {"Model": "Chosen tuned forest", "Test accuracy": tuned_test_accuracy},
     ])
     test_results
     return
@@ -291,10 +462,20 @@ def _(
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    **Answer:** The test and CV folds contain different examples, and CV trains
-    on smaller subsets. Selection also favors settings that happened to score
-    well in CV. Report the chosen model's test result without tuning against it;
-    otherwise this becomes another validation set rather than a final check.
+    **Worked explanation:** CV and test use different images, and the CV models
+    train on smaller subsets. Searching also selects candidates that happened
+    to perform well on the validation folds.
+
+    We choose **grid search**, because 0.9763 is higher than 0.9728. Its forest
+    scores about **0.9639** on the test set, compared with **0.9306** for the
+    baseline. That is an improvement of about **3.3 percentage points**. The exact
+    winning settings and scores can vary slightly with package versions. A
+    small score difference is not proof of a universal advantage from tuning.
+
+    Changing settings after inspecting test accuracy uses the test set to make
+    decisions. It then stops being an independent final assessment. Report this
+    result honestly; future tuning should use development-only evaluation and
+    a fresh untouched test set for a new final assessment.
     """)
     return
 
@@ -302,20 +483,12 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## 4 · A pipeline
+    ## 4 · Optional: keep preprocessing inside a pipeline
 
-    Build a `Pipeline` with `("scaler", StandardScaler())` followed by
-    `("rf", RandomForestClassifier(random_state=42))`. Cross-validate the
-    **whole pipeline** on `X_train, y_train`, with `cv=5` and accuracy scoring.
-    Keep this example separate from the model selected above; do not test it.
-
-    This keeps the original demo's scaler-and-forest structure. Forests do not
-    generally need scaling; the purpose is to learn how a pipeline keeps fitted
-    preprocessing inside each training fold. Our pixel features are numerical,
-    so there is no categorical target encoder in this example.
-
-    **Discuss:** Why is fitting a scaler on all data before cross-validation
-    leakage? Does the pipeline make it okay to choose settings using test scores?
+    The pipeline treats scaling and the forest as a single estimator. Each CV
+    fit learns a new scaler from that fold's training rows and applies it to
+    the validation rows. Forests do not generally need scaling; the example
+    illustrates how to keep fitted preprocessing inside the validation boundary.
     """)
     return
 
@@ -327,26 +500,42 @@ def _(
     StandardScaler,
     X_train,
     cross_val_score,
-    mo,
     np,
     y_train,
 ):
-    pipeline = Pipeline([("scaler", StandardScaler()), ("rf", RandomForestClassifier(random_state=42))])  # WRITE HERE: the two-step Pipeline described above.
-    mo.stop(pipeline is None, mo.md("Build the scaler-and-forest pipeline."))
-    scores = cross_val_score(pipeline, X_train, y_train, cv=5, scoring="accuracy")  # WRITE HERE: cross_val_score on the whole pipeline, training data only.
-    mo.stop(scores is None, mo.md("Cross-validate the entire pipeline."))
-    print("Pipeline fold accuracies:", np.round(scores, 4))
-    print(f"Mean CV accuracy: {scores.mean():.4f}")
+    # The list fixes the order: scale pixel features, then train the classifier.
+    # Each pair gives a step a name and an unfitted transformer or model.
+    pipeline = Pipeline(
+        steps=[
+            ("scaler", StandardScaler()),
+            ("rf", RandomForestClassifier(random_state=42)),
+        ],
+    )
+
+    pipeline_cv_scores = cross_val_score(
+        pipeline,
+        X_train,
+        y_train,
+        cv=5,
+        scoring="accuracy",
+    )
+
+    print("Pipeline validation accuracies:", np.round(pipeline_cv_scores, 4))
+    print(f"Average validation accuracy: {pipeline_cv_scores.mean():.4f}")
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    **Answer:** Each fold fits a new scaler using only its training rows, then
-    transforms the validation rows with those same statistics. Fitting the
-    scaler before CV includes information from validation rows. A pipeline
-    protects preprocessing boundaries, but cannot prevent test-driven choices.
+    **Worked explanation:** during one CV fit the scaler uses only that fold's
+    training portion; its validation portion does not influence the fitted mean
+    or standard deviation. The validation rows are then transformed using those
+    training statistics. This applies to learned preprocessing more broadly,
+    such as imputation or feature selection.
+
+    A pipeline protects the preprocessing boundary. We still have to choose
+    models using validation data and leave test scores out of those decisions.
     """)
     return
 
