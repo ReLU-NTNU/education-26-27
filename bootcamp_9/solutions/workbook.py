@@ -1395,7 +1395,7 @@ def _(mo):
     - **Fine-tuned:** start from a separate copy of those same pretrained weights and
       update them using windows from our training period only.
 
-    We will forecast the next **24 hours** at each of the first **14 daily origins**
+    We will forecast the next **24 hours** at each of the first **42 daily origins**
     in the existing test period. Each new day may use measurements observed before
     that day's forecast. We never give a model the actual consumption within its
     24-hour forecast window. Fine-tuning never uses test measurements.
@@ -1480,7 +1480,7 @@ def _(Path, mo, timestral_horizon, timestral_model_id, timestral_run):
 def _(lstm_df_small, lstm_train_size, timestral_horizon, timestral_tools):
     timestral_data = timestral_tools.prepare_comparison(
         lstm_df_small, lstm_train_size,
-        context_length=672, horizon=timestral_horizon, days=14,
+        context_length=672, horizon=timestral_horizon, days=42,
     )
     print(f"Training measurements: {len(timestral_data.train_values):,}")
     print(f"Evaluation: {timestral_data.actuals.shape[0]} forecasts × {timestral_data.horizon} hours")
@@ -1505,58 +1505,64 @@ def _(mo):
     mo.md("""
     ## B. Adapt the pretrained model to our training data
 
-    Use **40** optimizer updates for this short experiment. The helper below copies
-    the pretrained model before training, so our zero-shot model stays unchanged.
-    It samples batches of past-to-future windows entirely inside the training period
-    and updates all model weights with a small learning rate (`1e-5`).
+    Use **5** full training epochs. The helper copies the pretrained model, so
+    the zero-shot weights stay unchanged. We fit on the most recent two years
+    before validation, in shuffled batches of 16 windows, using **AdamW** with
+    learning rate `1e-4`. Every fitting window is visited once per epoch.
 
-    The last 14 days of the original training period are reserved for validation;
-    their targets never enter an optimizer update. Every 10 updates, we evaluate
-    the same 24-hour forecasting task on that validation period and keep the best
-    trained checkpoint by validation RMSE. The zero-shot validation score is shown
-    too: if it wins, prefer the unadapted model. We do not select a checkpoint
-    using the test scores below.
+    We minimize **mean squared error (MSE)** of the central point forecast. RMSE
+    is the square root of MSE, so these objectives rank forecasts the same way.
+    One fixed scale, calculated from fitting data only, keeps the loss manageable
+    without changing the relative weight of high- and low-demand days. The other
+    quantiles are not calibrated uncertainty estimates after this point-focused
+    fine-tuning.
 
-    Timestral predicts 21 quantiles. The supplied training loop uses **pinball loss**:
-    for a quantile such as 0.9, under-predicting is penalized more than over-predicting.
-    The median quantile uses a symmetric absolute-error loss. You do not need to
-    implement that loss for this task; inspect `timestral_task.py` if you want to
-    follow the PyTorch forward, backward and optimizer steps.
+    The last **12 weeks** of the original training period are reserved for
+    validation. Windows crossing missing or duplicated hours are excluded, leaving
+    55 valid daily forecasts in this dataset. Validation targets never enter an
+    optimizer update. After each epoch, we measure validation RMSE and keep the
+    best trained checkpoint. The zero-shot validation score is shown separately.
+    Test scores never select the checkpoint.
 
-    The public Mistral package provides inference code. This is a small educational
-    fine-tuning loop around its differentiable model, rather than the Mistral Forge
-    training pipeline. Forty updates demonstrate adaptation; they do not guarantee
-    an improvement. The loop matches the public forecaster's symmetric averaging
-    and non-negative clipping. Choose settings using training/validation data,
-    not this test table.
+    The plots below show minibatch loss, loss on the same fixed fitting windows,
+    and validation RMSE. Use them to distinguish learning from overfitting.
+    Inspect `timestral_task.py` to follow the forward, backward and optimizer steps.
+    This is an educational adapter around the public Mistral inference code.
+    It matches the public forecaster's symmetric averaging and non-negative
+    clipping; it is not Mistral Forge's training pipeline.
     """)
     return
 
 
 @app.cell
 def _():
-    timestral_fine_tune_steps = 40
-    return (timestral_fine_tune_steps,)
+    timestral_fine_tune_epochs = 5
+    return (timestral_fine_tune_epochs,)
 
 
 @app.cell
 def _(
     mo,
     timestral_data,
-    timestral_fine_tune_steps,
+    timestral_fine_tune_epochs,
     timestral_pretrained,
     timestral_tools,
 ):
     mo.stop(
-        timestral_fine_tune_steps is None,
-        mo.md('Set the number of fine-tuning updates to 40 above.'),
+        timestral_fine_tune_epochs is None,
+        mo.md('Set the number of fine-tuning epochs to 5 above.'),
     )
     timestral_adapted, timestral_losses = timestral_tools.fine_tune(
         timestral_pretrained, timestral_data,
-        steps=timestral_fine_tune_steps, batch_size=8, learning_rate=1e-5,
+        epochs=timestral_fine_tune_epochs, batch_size=16, learning_rate=1e-4,
+        validation_days=84, recent_days=730,
     )
     timestral_fine_tuned = timestral_tools.forecast_days(timestral_adapted, timestral_data)
-    print(f"Selected update: {timestral_losses.selected_step}")
+    print(f"Selected epoch: {timestral_losses.selected_epoch} (update {timestral_losses.selected_step})")
+    print(f"Fitting windows per epoch: {timestral_losses.fitting_windows:,}")
+    print(f"Initial fixed fitting MSE: {timestral_losses.initial_fitting_loss:.4f}")
+    print(f"Validation windows: {timestral_losses.validation_windows}; "
+          f"{timestral_losses.validation_start} to {timestral_losses.validation_end}")
     print(f"Validation RMSE: zero-shot {timestral_losses.zero_shot_validation_rmse:.2f} MW; "
           f"fine-tuned {timestral_losses.selected_validation_rmse:.2f} MW")
     return timestral_fine_tuned, timestral_losses
@@ -1567,12 +1573,14 @@ def _(mo):
     mo.md("""
     ## C. Compare and explain
 
-    The table evaluates every model on the same 14 × 24 held-out hourly values.
+    The table evaluates every model on the same 42 × 24 held-out hourly values.
+    It also reports RMSE separately for weeks 1–2 and weeks 3–6, so one short
+    period cannot hide a different result in another part of the test set.
     RMSE and MAE are in **MW**; MAPE is a percentage. Lower is better.
 
     1. Does zero-shot Timestral beat our trained LSTM and the seasonal baseline?
-    2. Did fine-tuning help? If it became worse, what could you change using a
-       validation period inside the training data?
+    2. Did fine-tuning lower overall RMSE? Did it help equally in both test periods?
+       Compare the forecast plot with the fitting and validation loss curves.
     3. What does "zero-shot" mean here? Does the model still receive past observations?
     4. Does this comparison isolate architecture? Consider pretraining, history length,
        calendar features and training budget before attributing a difference to size.
@@ -1603,12 +1611,20 @@ def _(
         lstm_model, lstm_scaler, lstm_train_normalized,
         lstm_test_normalized, timestral_data,
     )
-    timestral_scores = timestral_tools.score_forecasts(timestral_data.actuals, {
+    _predictions = {
         "Same hour yesterday": timestral_data.seasonal_naive,
         "Our LSTM": timestral_lstm_predictions,
         "Timestral-5M: zero-shot": timestral_zero_shot,
         "Timestral-5M: fine-tuned": timestral_fine_tuned,
-    })
+    }
+    timestral_scores = timestral_tools.score_forecasts(timestral_data.actuals, _predictions)
+    for _label, _slice in [("RMSE weeks 1–2 (MW)", slice(0, 14)),
+                            ("RMSE weeks 3–6 (MW)", slice(14, 42))]:
+        _period = timestral_tools.score_forecasts(
+            timestral_data.actuals[_slice],
+            {_name: _values[_slice] for _name, _values in _predictions.items()},
+        )
+        timestral_scores[_label] = _period["RMSE (MW)"]
     mo.Html(timestral_scores.round(2).to_html(index=False))
     return (timestral_lstm_predictions,)
 
@@ -1644,8 +1660,14 @@ def _(
 @app.cell
 def _(plt, timestral_losses):
     _fig, (_train_ax, _val_ax) = plt.subplots(2, 1, figsize=(8, 6))
-    _train_ax.plot(range(1, len(timestral_losses) + 1), timestral_losses)
-    _train_ax.set_ylabel("Training pinball loss")
+    _train_ax.plot(range(1, len(timestral_losses) + 1), timestral_losses,
+                   alpha=0.3, label="Minibatch loss")
+    _train_ax.plot([0] + [_record["step"] for _record in timestral_losses.validation],
+                   [timestral_losses.initial_fitting_loss] +
+                   [_record["fitting_loss"] for _record in timestral_losses.validation],
+                   marker="o", color="black", label="Same fixed fitting windows")
+    _train_ax.legend()
+    _train_ax.set_ylabel("Training MSE / fixed scale²")
     _train_ax.set_title("Fine-tuning: learning versus generalisation")
     _steps = [_record["step"] for _record in timestral_losses.validation]
     _scores = [_record["rmse_mw"] for _record in timestral_losses.validation]

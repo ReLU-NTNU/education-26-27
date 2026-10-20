@@ -132,17 +132,43 @@ class ComparisonProtocolTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'target shape'):
             task.score_forecasts(actual, {'Broken': np.zeros(4)})
 
+    def test_validation_split_skips_gaps_and_reserves_all_targets(self):
+        fitting, validation = task.split_validation(self.data)
+        self.assertEqual(len(fitting.train_values), self.split - 84 * 24)
+        _, _, ends = task.training_windows(fitting)
+        self.assertTrue(np.all(ends + 24 <= validation.origins.min()))
+        for origin, context in zip(validation.origins, validation.contexts):
+            np.testing.assert_array_equal(context, self.data.train_values[origin - 64:origin])
+        # A gap inside one validation context must remove that origin.
+        dates = self.data.train_dates.copy()
+        dates[-48:] += np.timedelta64(1, 'h')
+        changed = replace(self.data, train_dates=dates)
+        _, filtered = task.split_validation(changed)
+        self.assertLess(len(filtered.origins), len(validation.origins))
+
+    def test_point_loss_matches_squared_error_in_mw(self):
+        model = SmallModel()
+        inputs = torch.tensor([[10., 20.]])
+        targets = torch.full((1, 24), 24.)
+        loss = task.point_loss(model, inputs, targets, training_scale=2.)
+        self.assertAlmostEqual(float(loss.detach()), 4.)
+        loss.backward()
+        self.assertNotEqual(float(model.bias.grad), 0.)
+
     def test_fine_tuning_copies_weights_and_never_uses_test_values(self):
         forecaster = SmallForecaster(SmallModel())
         altered = replace(self.data, actuals=np.full_like(self.data.actuals, 1e12),
                           contexts=np.full_like(self.data.contexts, -1e12))
         with fake_timestral():
-            adapted, losses = task.fine_tune(forecaster, self.data, steps=2, batch_size=4)
-            second, second_history = task.fine_tune(forecaster, altered, steps=2, batch_size=4)
+            adapted, losses = task.fine_tune(forecaster, self.data, epochs=1, batch_size=512)
+            second, second_history = task.fine_tune(forecaster, altered, epochs=1, batch_size=512)
         self.assertEqual(float(forecaster.model.bias.detach()), 0.)
         self.assertNotEqual(float(adapted.model.bias.detach()), 0.)
         torch.testing.assert_close(adapted.model.bias, second.model.bias, rtol=0, atol=0)
         self.assertTrue(np.isfinite(losses).all())
+        # 730 windows at batch size 512 requires the final partial batch.
+        self.assertEqual(len(losses), 2)
+        self.assertEqual(len(losses.validation), 1)
         self.assertLess(losses.fit_measurements, self.split)
         self.assertEqual(losses.validation, second_history.validation)
         for group in adapted.model.groups:
@@ -150,15 +176,15 @@ class ComparisonProtocolTests(unittest.TestCase):
 
     def test_validation_targets_do_not_enter_optimizer_updates(self):
         changed = self.frame.copy()
-        changed.loc[self.split - 14 * 24:, 'mw'] += 10000
+        changed.loc[self.split - 84 * 24:, 'mw'] += 10000
         altered = task.prepare_comparison(changed, self.split, context_length=64, days=2)
         forecaster = SmallForecaster(SmallModel())
         with fake_timestral():
-            first, first_history = task.fine_tune(forecaster, self.data, steps=2, batch_size=4)
-            second, second_history = task.fine_tune(forecaster, altered, steps=2, batch_size=4)
+            first, first_history = task.fine_tune(forecaster, self.data, epochs=1, batch_size=512)
+            second, second_history = task.fine_tune(forecaster, altered, epochs=1, batch_size=512)
         np.testing.assert_array_equal(first_history, second_history)
         torch.testing.assert_close(first.model.bias, second.model.bias, rtol=0, atol=0)
-        self.assertEqual(first_history.fit_measurements, self.split - 14 * 24)
+        self.assertEqual(first_history.fit_measurements, self.split - 84 * 24)
 
 
 if __name__ == '__main__':

@@ -56,12 +56,18 @@ reactive execution; setup uses this folder's locked uv environment.
 ## Optional final task: Timestral-5M
 
 The last task compares the existing LSTM, a same-hour-yesterday baseline,
-zero-shot Timestral-5M and a locally fine-tuned copy. It uses the first 14 daily
-24-hour forecast windows after the existing training split. All models are
-scored on the same targets. The last 14 days before the test split are reserved
-for validation; optimizer updates only sample earlier windows. The best trained
-checkpoint is selected by validation RMSE, with the untouched zero-shot validation
-score reported separately. Test scores do not select the checkpoint.
+zero-shot Timestral-5M and a locally fine-tuned copy on the same 42 daily
+24-hour forecast windows after the existing split. The table reports overall
+scores and separate RMSEs for the first two and following four weeks.
+
+Fine-tuning minimizes central point-forecast **MSE**, aligned with the reported
+RMSE. It uses two recent years of fitting targets, five full shuffled epochs,
+batch size 16, and AdamW (`lr=1e-4`, weight decay `0.01`). The last 12 pre-test
+weeks are validation only, with 55 valid daily windows after excluding windows
+that cross missing or duplicated hours. Each fitting window is visited once per
+epoch. Validation RMSE selects the best trained checkpoint; test scores never
+select it. The untouched zero-shot validation baseline and a fixed fitting-loss
+curve are shown separately.
 
 Start it with the optional dependencies:
 
@@ -74,8 +80,11 @@ extra installs the pinned official Timestral Git repository, so Git and internet
 access are needed initially. Clicking **Run Timestral task** downloads the
 approximately 21 MB pinned checkpoint to `bootcamp_9/.cache/timestral`.
 Opening the notebook does not start the optional download or fine-tuning.
-Both forecasting and the 40-update fine-tuning exercise run locally on the CPU.
-The fine-tuning loop is an educational adapter, not Mistral Forge's training pipeline.
+Forecasting and fine-tuning run locally on the CPU. The public Mistral package
+provides inference; the supplied fine-tuning loop is an educational adapter,
+not Mistral Forge's training pipeline. It trains the central forecast for squared
+error; the other quantiles should not be treated as calibrated intervals after
+this exercise.
 
 If you already have a personal workbook, rename it as a backup before running
 setup to create a fresh copy with this new task. Setup preserves existing files;
@@ -99,3 +108,45 @@ To check the comparison protocol without downloading weights:
 ```sh
 uv run --locked --project bootcamp_9 python -m unittest discover -s bootcamp_9/tests -v
 ```
+
+For an optional diagnostic using the actual pretrained checkpoint:
+
+```sh
+uv run --locked --project bootcamp_9 --extra timestral python bootcamp_9/tests/check_timestral_learning.py
+```
+
+This repeatedly trains on eight fixed fitting windows, verifies nonzero gradients
+through every parameter tensor, and checks a substantial decrease in their RMSE.
+It does not evaluate validation or test targets. This overfit check establishes
+that the training path can learn; validation still decides which checkpoint to use.
+
+To reproduce the selected fine-tuning experiment and its recorded metrics:
+
+```sh
+uv run --locked --project bootcamp_9 --extra timestral python bootcamp_9/tests/benchmark_timestral.py
+```
+
+The benchmark verifies that pretrained weights remain unchanged, fine-tuned
+weights change, and RMSE improves on the combined six weeks and on weeks 3–6.
+The recorded CPU run took about 13 seconds for fine-tuning (two threads):
+
+| Period | Zero-shot RMSE (MW) | Fine-tuned RMSE (MW) |
+| --- | ---: | ---: |
+| Pre-test validation | 723.19 | 666.41 |
+| Test weeks 1–2 | 1322.41 | 1345.75 |
+| Test weeks 3–6 | 721.30 | 652.37 |
+| All six test weeks | 964.24 | 942.02 |
+
+This is a 2.3% overall reduction and a 9.6% reduction in weeks 3–6. Fine-tuning
+still worsens the first fortnight by 1.8%; both periods remain visible in the
+exercise. The original fortnight had already been inspected during development.
+The following four weeks were checked after choosing the recipe on pre-test
+validation. These are results for this series and period, not a general guarantee.
+
+[Full selected-run metrics](tests/timestral_benchmark.json) include checkpoint
+losses and validation dates. [Validation trials](tests/timestral_validation_trials.json)
+record eight network-training recipes (AdamW/RMSprop, point MSE/pinball,
+full-network/head-only updates, and different training-history lengths).
+Two years of fitting data with full-network AdamW and point MSE won on validation.
+Seasonal ridge/boosted residual corrections were also compared using pre-test
+validation and did not beat that recipe.

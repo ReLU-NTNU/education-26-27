@@ -1,0 +1,132 @@
+{
+  "model": "mistralai/Timestral-5M",
+  "model_revision": "bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f",
+  "torch_version": "2.14.1",
+  "seed": 42,
+  "training": {
+    "optimizer": "AdamW",
+    "learning_rate": 0.0001,
+    "weight_decay": 0.01,
+    "batch_size": 16,
+    "epochs": 5,
+    "objective": "central point forecast MSE / fixed training scale squared",
+    "recent_days": 730,
+    "validation_days_reserved": 84,
+    "fitting_windows": 582,
+    "validation_windows": 55,
+    "validation_start": "2014-10-09T14:00:00.000000000",
+    "validation_end": "2015-01-01T12:00:00.000000000",
+    "selected_epoch": 4,
+    "initial_fitting_loss": 0.09231283515691757,
+    "zero_shot_validation_rmse": 723.1854248046875,
+    "checkpoints": [
+      {
+        "epoch": 1,
+        "step": 37,
+        "rmse_mw": 689.8851928710938,
+        "fitting_loss": 0.07134909182786942
+      },
+      {
+        "epoch": 2,
+        "step": 74,
+        "rmse_mw": 682.1314086914062,
+        "fitting_loss": 0.06524312496185303
+      },
+      {
+        "epoch": 3,
+        "step": 111,
+        "rmse_mw": 670.822021484375,
+        "fitting_loss": 0.05759702995419502
+      },
+      {
+        "epoch": 4,
+        "step": 148,
+        "rmse_mw": 666.4075317382812,
+        "fitting_loss": 0.046340420842170715
+      },
+      {
+        "epoch": 5,
+        "step": 185,
+        "rmse_mw": 684.4041137695312,
+        "fitting_loss": 0.03963565453886986
+      }
+    ]
+  },
+  "periods": [
+    {
+      "period": "Weeks 1\u20132",
+      "start": "2015-01-01T13:00:00.000000000",
+      "end": "2015-01-15T12:00:00.000000000",
+      "scores": [
+        {
+          "Model": "Same hour yesterday",
+          "RMSE (MW)": 1909.6285400390625,
+          "MAE (MW)": 1462.452392578125,
+          "MAPE (%)": 8.228499412536621
+        },
+        {
+          "Model": "Timestral-5M: zero-shot",
+          "RMSE (MW)": 1322.4063720703125,
+          "MAE (MW)": 945.5841674804688,
+          "MAPE (%)": 5.36063814163208
+        },
+        {
+          "Model": "Timestral-5M: fine-tuned",
+          "RMSE (MW)": 1345.7520751953125,
+          "MAE (MW)": 949.2442626953125,
+          "MAPE (%)": 5.311017990112305
+        }
+      ]
+    },
+    {
+      "period": "Weeks 3\u20136",
+      "start": "2015-01-15T13:00:00.000000000",
+      "end": "2015-02-12T12:00:00.000000000",
+      "scores": [
+        {
+          "Model": "Same hour yesterday",
+          "RMSE (MW)": 1680.233154296875,
+          "MAE (MW)": 1337.5386962890625,
+          "MAPE (%)": 7.975667953491211
+        },
+        {
+          "Model": "Timestral-5M: zero-shot",
+          "RMSE (MW)": 721.2969360351562,
+          "MAE (MW)": 522.7340087890625,
+          "MAPE (%)": 3.094719886779785
+        },
+        {
+          "Model": "Timestral-5M: fine-tuned",
+          "RMSE (MW)": 652.37109375,
+          "MAE (MW)": 477.24200439453125,
+          "MAPE (%)": 2.8109874725341797
+        }
+      ]
+    },
+    {
+      "period": "All six weeks",
+      "start": "2015-01-01T13:00:00.000000000",
+      "end": "2015-02-12T12:00:00.000000000",
+      "scores": [
+        {
+          "Model": "Same hour yesterday",
+          "RMSE (MW)": 1760.0235595703125,
+          "MAE (MW)": 1379.1766357421875,
+          "MAPE (%)": 8.059945106506348
+        },
+        {
+          "Model": "Timestral-5M: zero-shot",
+          "RMSE (MW)": 964.2435302734375,
+          "MAE (MW)": 663.6840209960938,
+          "MAPE (%)": 3.8500263690948486
+        },
+        {
+          "Model": "Timestral-5M: fine-tuned",
+          "RMSE (MW)": 942.0234985351562,
+          "MAE (MW)": 634.5759887695312,
+          "MAPE (%)": 3.6443307399749756
+        }
+      ]
+    }
+  ]
+}

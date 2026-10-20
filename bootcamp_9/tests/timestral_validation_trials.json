@@ -1,0 +1,194 @@
+{
+  "selection_metric": "pre-test validation RMSE (MW)",
+  "validation_candidates": 84,
+  "valid_validation_windows": 55,
+  "zero_shot_validation_rmse": 723.1854248046875,
+  "selected_network_candidate": 0,
+  "network_trials": [
+    {
+      "config": [
+        "mse",
+        730,
+        "all",
+        "AdamW",
+        0.0001
+      ],
+      "validation": [
+        689.8851928710938,
+        682.1314086914062,
+        670.822021484375,
+        666.4075317382812,
+        684.4041137695312
+      ],
+      "best": 666.4075317382812,
+      "epoch": 4
+    },
+    {
+      "config": [
+        "mse",
+        730,
+        "head",
+        "AdamW",
+        0.0001
+      ],
+      "validation": [
+        718.9338989257812,
+        717.9151611328125,
+        717.9365844726562,
+        718.4157104492188,
+        717.7706909179688
+      ],
+      "best": 717.7706909179688,
+      "epoch": 5
+    },
+    {
+      "config": [
+        "mse",
+        730,
+        "all",
+        "AdamW",
+        1e-05
+      ],
+      "validation": [
+        715.8741455078125,
+        711.2171630859375,
+        709.0354614257812,
+        705.4979248046875,
+        704.12939453125
+      ],
+      "best": 704.12939453125,
+      "epoch": 5
+    },
+    {
+      "config": [
+        "mse",
+        365,
+        "all",
+        "AdamW",
+        0.0001
+      ],
+      "validation": [
+        717.72900390625,
+        727.6942749023438,
+        723.048828125,
+        723.9533081054688,
+        754.1993408203125
+      ],
+      "best": 717.72900390625,
+      "epoch": 1
+    },
+    {
+      "config": [
+        "mse",
+        null,
+        "all",
+        "AdamW",
+        0.0001
+      ],
+      "validation": [
+        697.4686889648438,
+        684.8458862304688,
+        689.3172607421875,
+        690.23974609375,
+        727.158203125
+      ],
+      "best": 684.8458862304688,
+      "epoch": 2
+    },
+    {
+      "config": [
+        "mse",
+        730,
+        "all",
+        "RMSprop",
+        1e-05
+      ],
+      "validation": [
+        705.4882202148438,
+        702.0658569335938,
+        698.783935546875,
+        699.2557983398438,
+        696.2119750976562
+      ],
+      "best": 696.2119750976562,
+      "epoch": 5
+    },
+    {
+      "config": [
+        "pinball",
+        730,
+        "all",
+        "AdamW",
+        0.0001
+      ],
+      "validation": [
+        690.614013671875,
+        687.72265625,
+        677.7250366210938,
+        676.3704223632812,
+        689.1922607421875
+      ],
+      "best": 676.3704223632812,
+      "epoch": 4
+    },
+    {
+      "config": [
+        "mse",
+        730,
+        "head",
+        "AdamW",
+        0.001
+      ],
+      "validation": [
+        717.2968139648438,
+        717.0726318359375,
+        709.1638793945312,
+        714.9959716796875,
+        716.0526123046875
+      ],
+      "best": 709.1638793945312,
+      "epoch": 3
+    }
+  ],
+  "residual_trials": {
+    "selected": 5,
+    "candidates": [
+      {
+        "method": "ridge",
+        "alpha": 0.1,
+        "validation_rmse": 695.9751642285086
+      },
+      {
+        "method": "ridge",
+        "alpha": 1,
+        "validation_rmse": 695.9753591315441
+      },
+      {
+        "method": "ridge",
+        "alpha": 10,
+        "validation_rmse": 695.97735080708
+      },
+      {
+        "method": "ridge",
+        "alpha": 100,
+        "validation_rmse": 696.0013836910531
+      },
+      {
+        "method": "ridge",
+        "alpha": 1000,
+        "validation_rmse": 696.5362107720193
+      },
+      {
+        "method": "gradient_boosting",
+        "leaves": 7,
+        "validation_rmse": 695.8268283450251
+      },
+      {
+        "method": "gradient_boosting",
+        "leaves": 15,
+        "validation_rmse": 700.7301173541059
+      }
+    ]
+  },
+  "notes": "Test targets did not select recipes or checkpoints. The first 14 test days were already inspected before these trials. The next 28 were checked after selecting network candidate 0. Residual trials were later evaluated on pre-test validation only and rejected there."
+}

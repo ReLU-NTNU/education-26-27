@@ -108,6 +108,12 @@ class FineTuneHistory(list):
         self.zero_shot_validation_rmse = None
         self.selected_validation_rmse = None
         self.fit_measurements = None
+        self.fitting_windows = None
+        self.initial_fitting_loss = None
+        self.selected_epoch = None
+        self.validation_windows = None
+        self.validation_start = None
+        self.validation_end = None
 
 
 def training_quantiles(model, inputs, horizon):
@@ -128,33 +134,75 @@ def training_quantiles(model, inputs, horizon):
     return quantiles[:, :horizon, :]
 
 
-def fine_tune(forecaster, data, steps=40, batch_size=8, learning_rate=1e-5, seed=42,
-              validation_days=14, validate_every=10):
-    """Train a COPY, selecting its best trained checkpoint on pre-test validation.
+def split_validation(data, validation_days=84):
+    """Chronological fitting/validation split, omitting non-hourly windows.
 
-    Reserve the last 14 days of the original training period for validation.
-    Neither these targets nor any test target enters an optimizer update.
-    Selection uses validation RMSE of the same median forecasts used at test.
-    The untouched zero-shot validation score is reported separately; if it wins,
-    the honest conclusion is to prefer the unadapted model.
+    Contexts may contain earlier observations; every fitting target still ends
+    before the first candidate validation origin. DST gaps/duplicates must not
+    be interpreted as ordinary hourly steps.
+    """
+    fit_end = len(data.train_values) - validation_days * data.horizon
+    context_length = data.contexts.shape[1]
+    if fit_end < context_length + data.horizon:
+        raise ValueError("Not enough history before the validation period.")
+    values, dates = data.train_values, data.train_dates
+    candidates = range(fit_end, len(values) - data.horizon + 1, data.horizon)
+    origins = np.array([
+        end for end in candidates
+        if np.all(np.diff(dates[end - context_length:end + data.horizon])
+                  == np.timedelta64(1, 'h'))
+    ], dtype=np.int64)
+    if not len(origins):
+        raise ValueError("No complete hourly validation windows.")
+    fitting = replace(data, train_values=values[:fit_end].copy(),
+                      train_dates=dates[:fit_end].copy())
+    validation = replace(
+        fitting, origins=origins,
+        contexts=np.stack([values[o - context_length:o] for o in origins]),
+        actuals=np.stack([values[o:o + data.horizon] for o in origins]),
+        dates=np.stack([dates[o:o + data.horizon] for o in origins]),
+        seasonal_naive=np.stack([values[o - data.horizon:o] for o in origins]),
+    )
+    return fitting, validation
+
+
+def point_loss(model, inputs, targets, training_scale, horizon=24):
+    """Squared error of the same central forecast used in the results table.
+
+    This adapts the median channel as a point forecast for RMSE. The other
+    quantiles are not trained/calibrated prediction intervals in this exercise.
+    """
+    quantiles = training_quantiles(model, inputs, horizon)
+    median = quantiles[:, :, model.config.quantile_knots.index(0.5)]
+    return ((median - targets) / training_scale).square().mean()
+
+
+def fine_tune(forecaster, data, epochs=5, batch_size=16, learning_rate=1e-4, seed=42,
+              validation_days=84, recent_days=730):
+    """Minimize point-forecast MSE on recent data; select on pre-test RMSE.
+
+    Copy the pretrained model. Visit each fitting window once per epoch. The
+    final 12 pre-test weeks are validation only; skip windows crossing bad hours.
+    Use two recent years of fitting targets rather than equally weighting every
+    older year. Neither validation nor test targets enter an optimizer update.
     """
     from timestral import TimestralForecaster
 
-    if not isinstance(steps, int) or isinstance(steps, bool) or steps < 1:
-        raise ValueError("Fine-tuning steps must be a positive integer.")
-    if batch_size < 1 or learning_rate <= 0 or validate_every < 1:
-        raise ValueError("Batch size, learning rate and validation interval must be positive.")
+    if not isinstance(epochs, int) or isinstance(epochs, bool) or epochs < 1:
+        raise ValueError("Fine-tuning epochs must be a positive integer.")
+    if batch_size < 1 or learning_rate <= 0:
+        raise ValueError("Batch size and learning rate must be positive.")
     if validation_days < 1:
         raise ValueError("Reserve at least one day for validation.")
-    fit_end = len(data.train_values) - validation_days * data.horizon
-    pre_test_frame = pd.DataFrame({'mw': data.train_values, 'date': data.train_dates})
-    validation = prepare_comparison(
-        pre_test_frame, fit_end, context_length=data.contexts.shape[1],
-        horizon=data.horizon, days=validation_days,
-    )
-    fitting = replace(data, train_values=data.train_values[:fit_end].copy(),
-                      train_dates=data.train_dates[:fit_end].copy())
-    inputs, targets, _ = training_windows(fitting)
+    if recent_days < 1:
+        raise ValueError("Use at least one recent fitting day.")
+    fitting, validation = split_validation(data, validation_days)
+    fit_end = len(fitting.train_values)
+    inputs, targets, ends = training_windows(fitting)
+    recent = ends >= fit_end - recent_days * data.horizon
+    inputs, targets = inputs[recent], targets[recent]
+    if not len(inputs):
+        raise ValueError("No complete windows in the recent fitting period.")
     model = deepcopy(forecaster.model)
     device = next(model.parameters()).device
     adapted = TimestralForecaster(
@@ -165,45 +213,61 @@ def fine_tune(forecaster, data, steps=40, batch_size=8, learning_rate=1e-5, seed
     )
     history = FineTuneHistory()
     history.fit_measurements = fit_end
+    history.fitting_windows = len(inputs)
     zero_validation = forecast_days(forecaster, validation)
     history.zero_shot_validation_rmse = float(np.sqrt(np.mean((zero_validation - validation.actuals) ** 2)))
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=0.01)
-    levels = torch.tensor(model.config.quantile_knots, device=device).view(1, 1, -1)
+    # A fixed training-only scale preserves the MW squared-error weighting.
+    # Per-window normalization would give low-variance days extra influence.
+    training_scale = max(float(np.std(fitting.train_values)), 1.0)
+    history.validation_windows = len(validation.origins)
+    history.validation_start = str(validation.dates[0, 0])
+    history.validation_end = str(validation.dates[-1, -1])
     generator = torch.Generator().manual_seed(seed)
+    probe = torch.linspace(0, len(inputs) - 1, min(64, len(inputs))).long()
+    probe_x, probe_y = inputs[probe].to(device), targets[probe].to(device)
+
+    def loss_for(x, y):
+        return point_loss(model, x, y, training_scale, data.horizon)
+
+    with torch.no_grad():
+        history.initial_fitting_loss = float(loss_for(probe_x, probe_y))
+    print(f"Fine-tuning {len(inputs):,} windows for {epochs} full epochs ({batch_size} windows/batch)")
     best_score, best_weights = float('inf'), None
-    for step in range(steps):
-        # Public forecast() switches to eval mode during validation.
-        model.train()
-        sample = torch.randint(len(inputs), (batch_size,), generator=generator)
-        x, y = inputs[sample].to(device), targets[sample].to(device)
-        optimizer.zero_grad(set_to_none=True)
-        quantiles = training_quantiles(model, x, data.horizon)
-        context_scale = x.std(dim=-1, keepdim=True).clamp_min(1.0).unsqueeze(-1)
-        error = (y.unsqueeze(-1) - quantiles) / context_scale
-        loss = torch.maximum(levels * error, (levels - 1) * error).mean()
-        if not torch.isfinite(loss):
-            raise ValueError("Non-finite training loss; stop and check inputs or learning rate.")
-        loss.backward()
-        grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-        if not torch.isfinite(grad_norm):
-            raise ValueError("Non-finite gradients; stop and check the training setup.")
-        optimizer.step()
-        history.append(float(loss.detach()))
-        if step == 0 or (step + 1) % 10 == 0 or step + 1 == steps:
-            print(f"Fine-tuning step {step + 1}/{steps}: loss {history[-1]:.4f}")
-        if (step + 1) % validate_every == 0 or step + 1 == steps:
-            prediction = forecast_days(adapted, validation)
-            score = float(np.sqrt(np.mean((prediction - validation.actuals) ** 2)))
-            history.validation.append({'step': step + 1, 'rmse_mw': score})
-            print(f"  Validation RMSE: {score:.2f} MW")
-            if score < best_score:
-                best_score = score
-                best_weights = deepcopy(model.state_dict())
-                history.selected_step = step + 1
+    step = 0
+    for epoch in range(epochs):
+        order = torch.randperm(len(inputs), generator=generator)
+        for start in range(0, len(inputs), batch_size):
+            model.train()
+            sample = order[start:start + batch_size]
+            x, y = inputs[sample].to(device), targets[sample].to(device)
+            optimizer.zero_grad(set_to_none=True)
+            loss = loss_for(x, y)
+            if not torch.isfinite(loss):
+                raise ValueError("Non-finite training loss; stop and check inputs or learning rate.")
+            loss.backward()
+            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            if not torch.isfinite(grad_norm) or grad_norm <= 0:
+                raise ValueError("Gradients must be finite and nonzero for adaptation.")
+            optimizer.step()
+            history.append(float(loss.detach()))
+            step += 1
+        prediction = forecast_days(adapted, validation)
+        score = float(np.sqrt(np.mean((prediction - validation.actuals) ** 2)))
+        with torch.no_grad():
+            fixed_loss = float(loss_for(probe_x, probe_y))
+        history.validation.append({'epoch': epoch + 1, 'step': step,
+                                   'rmse_mw': score, 'fitting_loss': fixed_loss})
+        print(f"Epoch {epoch + 1}/{epochs}: fixed fitting loss {fixed_loss:.4f}; validation RMSE {score:.2f} MW")
+        if score < best_score:
+            best_score = score
+            best_weights = deepcopy(model.state_dict())
+            history.selected_step = step
+            history.selected_epoch = epoch + 1
     model.load_state_dict(best_weights)
     model.eval()
     history.selected_validation_rmse = best_score
-    print(f"Selected trained checkpoint: step {history.selected_step}; validation RMSE {best_score:.2f} MW")
+    print(f"Selected trained checkpoint: epoch {history.selected_epoch}; validation RMSE {best_score:.2f} MW")
     print(f"Zero-shot validation RMSE: {history.zero_shot_validation_rmse:.2f} MW")
     return adapted, history
 
