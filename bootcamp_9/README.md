@@ -1,54 +1,56 @@
 # Bootcamp 9 · Time series
 
-This is the Time Series notebook we'll use for the lecture.
-
-## Open the class workbook
-
-From the repository folder, run:
+Open the class workbook from the repository folder:
 
 ```sh
 uv run --locked --project bootcamp_9 python bootcamp_9/start.py
 ```
 
-uv installs the required Python version and packages. The command opens your
-personal copy at `bootcamp_9/work/exercises.py` in your browser. Keep the
-terminal open while working; press **Ctrl+C** to stop it. Save with
-**Ctrl+S / Cmd+S**. The included `AEP_hourly.csv` is loaded automatically.
-
-The original architecture, training, prediction and sequence-building blanks
-remain in the class workbook. Replace the `None` placeholders with your code.
-Dependent cells wait until those results are available. Run training cells
-when you reach them; RNN, LSTM and expanding-window training can take time.
-
-## Solutions
+For the worked solutions:
 
 ```sh
 uv run --locked --project bootcamp_9 python bootcamp_9/start.py --solution
 ```
 
-This opens a separate personal copy at `bootcamp_9/work/solutions.py`.
+uv installs Python 3.13 and all lecture dependencies, including Timestral. Git
+and internet access are needed for the first installation. Setup instructions
+are also included at the beginning of both workbooks.
 
-## VS Code
+Your answers are saved in `bootcamp_9/work/exercises.py`; solutions use
+`bootcamp_9/work/solutions.py`. The launcher reopens these personal copies
+without overwriting them. Save with **Ctrl+S / Cmd+S** and keep the terminal
+open while working. Back up `work/` to keep a separate copy of your answers.
 
-Prepare the personal copy without opening the browser:
+For VS Code, add `--setup` to either command, open the printed file as a marimo
+notebook, and select `bootcamp_9/.venv/bin/python` as the kernel
+(Windows: `bootcamp_9/.venv/Scripts/python.exe`).
+
+## Files
+
+- `exercises/workbook.py` — class workbook, including the final Timestral task.
+- `solutions/workbook.py` — worked solutions.
+- `helpers.py` — shared forecasting and training utilities.
+- `AEP_hourly.csv` — the lecture dataset.
+- `start.py` — launcher; `pyproject.toml`, `uv.lock` and `.python-version` define the environment.
+- `work/`, `.venv/` and `.cache/` — generated local files, ignored by Git.
+
+The final task compares the LSTM, a seasonal baseline, zero-shot Timestral-5M
+and a fine-tuned copy on the same daily forecasts. Its run button starts the
+approximately 21 MB checkpoint download and CPU fine-tuning. The workbooks
+contain the experiment instructions and results table, full-period and day/week
+forecast views, daily RMSE, and fitting/validation curves.
+
+Maintainer checks live outside the lesson folder:
 
 ```sh
-uv run --locked --project bootcamp_9 python bootcamp_9/start.py --setup
+uv run --locked --project bootcamp_9 python -m unittest discover -s tests -v
 ```
 
-Open `bootcamp_9/work/exercises.py` with **marimo: Open as marimo notebook**.
-Select `bootcamp_9/.venv/bin/python` on macOS/Linux or
-`bootcamp_9\.venv\Scripts\python.exe` on Windows as the kernel. Install the
-Python and marimo extensions if needed. For the solutions, add
-`--setup --solution` and open `bootcamp_9/work/solutions.py`.
+## Sources
 
-Setup never overwrites an existing personal copy. Back up `bootcamp_9/work/`
-to keep your answers; Git ignores it.
-
-## Source
-
-The class and solutions notebooks and dataset come from
+The original lecture content and dataset come from
 [`tutorials-25-26/notebooks_2026/education_02`](https://github.com/ReLU-NTNU/tutorials-25-26/tree/2a5a9fdb48549b3a620b7ba3e8bfac6f3d20f5f2/notebooks_2026/education_02).
-Notebook prose, comments, plots and exercise content are preserved. Variable
-names and dependencies are separated between model sections for marimo's
-reactive execution; setup uses this folder's locked uv environment.
+
+Timestral uses the pinned [official package](https://github.com/mistralai/timestral)
+and [Timestral-5M checkpoint](https://huggingface.co/mistralai/Timestral-5M).
+The code uses Apache 2.0; the weights use Mistral's Modified MIT license.
