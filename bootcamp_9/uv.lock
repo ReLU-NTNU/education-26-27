@@ -686,13 +686,9 @@ dependencies = [
     { name = "pandas" },
     { name = "scikit-learn" },
     { name = "seaborn" },
+    { name = "timestral" },
     { name = "torch", version = "2.14.1", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'darwin'" },
     { name = "torch", version = "2.14.1+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
-]
-
-[package.optional-dependencies]
-timestral = [
-    { name = "timestral" },
 ]
 
 [package.metadata]
@@ -703,11 +699,10 @@ requires-dist = [
     { name = "pandas", specifier = ">=3.0.0,<4" },
     { name = "scikit-learn", specifier = ">=1.8.0,<2" },
     { name = "seaborn", specifier = ">=0.13.2,<0.14" },
-    { name = "timestral", marker = "extra == 'timestral'", git = "https://github.com/mistralai/timestral.git?rev=a534bdbd244d64f3d9d743f46c7bf6fc330ed4ff" },
+    { name = "timestral", git = "https://github.com/mistralai/timestral.git?rev=a534bdbd244d64f3d9d743f46c7bf6fc330ed4ff" },
     { name = "torch", marker = "sys_platform != 'darwin'", specifier = ">=2.10.0,<3", index = "https://download.pytorch.org/whl/cpu" },
     { name = "torch", marker = "sys_platform == 'darwin'", specifier = ">=2.10.0,<3" },
 ]
-provides-extras = ["timestral"]
 
 [[package]]
 name = "safetensors"

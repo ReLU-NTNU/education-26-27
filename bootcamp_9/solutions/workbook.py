@@ -5,7 +5,7 @@ app = marimo.App()
 
 
 @app.cell
-def _():
+def setup():
     import marimo as mo
     import pandas as pd
     import matplotlib.pyplot as plt
@@ -19,6 +19,12 @@ def _():
     import random
     import os
     from pathlib import Path
+    import sys as _sys
+
+    workbook_root = Path(mo.notebook_location()).resolve().parent
+    if str(workbook_root.parent) not in _sys.path:
+        _sys.path.insert(0, str(workbook_root.parent))
+    from bootcamp_9 import helpers as timestral_tools
 
     return (
         DataLoader,
@@ -35,6 +41,8 @@ def _():
         plt,
         random,
         torch,
+        timestral_tools,
+        workbook_root,
     )
 
 
@@ -44,6 +52,33 @@ def _(mo):
     # PJM HOURLY ENERGY CONSUMPTION
 
     https://www.kaggle.com/datasets/robikscube/hourly-energy-consumption/data
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    ## Setup
+
+    From the repository folder, start this workbook with:
+
+    ```sh
+    uv run --locked --project bootcamp_9 python bootcamp_9/start.py
+    ```
+
+    uv installs Python 3.13 and all packages for this lecture, including Timestral.
+    Git and internet access are needed for the first installation. Add `--solution`
+    to open the worked solutions. Your answers are saved in `bootcamp_9/work/`;
+    save with **Ctrl+S / Cmd+S** and keep the terminal open while working.
+
+    **VS Code:** add `--setup` to prepare the workbook, open the file printed by
+    that command as a marimo notebook, and select `bootcamp_9/.venv/bin/python`
+    (Windows: `bootcamp_9/.venv/Scripts/python.exe`) as the kernel.
+
+    Run the cells in order. Training the neural networks takes time. The final
+    Timestral comparison starts only when you click its run button; the first run
+    downloads a checkpoint of approximately 21 MB, then runs locally on the CPU.
     """)
     return
 
@@ -1406,18 +1441,8 @@ def _(mo):
     baseline. The LSTM keeps its original lag/time features; Timestral receives the
     most recent 672 hourly consumption values (four weeks).
 
-    **Before starting:** install the optional packages and open the workbook with:
-
-    ```sh
-    uv run --locked --project bootcamp_9 --extra timestral python bootcamp_9/start.py
-    ```
-
-    Add `--solution` for the worked version. This optional extra installs Mistral's
-    pinned Git repository, so Git and internet access are needed on first setup.
-    The approximately 21 MB model download is cached locally. In VS Code, run the
-    same command with `--setup`, then keep using `bootcamp_9/.venv` as the kernel.
-    Click the button below when you are ready; opening the notebook alone does not
-    start this extra download or fine-tuning.
+    Click **Run Timestral task** below when you are ready. The model checkpoint
+    is cached locally after its first download.
     """)
     return
 
@@ -1454,30 +1479,20 @@ def _():
 
 
 @app.cell
-def _(Path, mo, timestral_horizon, timestral_model_id, timestral_run):
+def _(
+    lstm_df_small,
+    lstm_train_size,
+    mo,
+    timestral_horizon,
+    timestral_model_id,
+    timestral_run,
+    timestral_tools,
+):
     mo.stop(not timestral_run.value)
     mo.stop(
         timestral_model_id is None or timestral_horizon is None,
         mo.md('Fill in the Timestral model ID and the 24-hour horizon above.'),
     )
-    import importlib.util as _importlib_util
-    import sys as _sys
-    mo.stop(
-        _importlib_util.find_spec("timestral") is None,
-        mo.md("Install the optional extra: `uv run --locked --project bootcamp_9 --extra timestral python bootcamp_9/start.py --setup`, then restart this kernel."),
-    )
-    timestral_root = Path(mo.notebook_location()).resolve().parent
-    _spec = _importlib_util.spec_from_file_location(
-        "bootcamp_nine_timestral_task", timestral_root / "timestral_task.py"
-    )
-    timestral_tools = _importlib_util.module_from_spec(_spec)
-    _sys.modules[_spec.name] = timestral_tools
-    _spec.loader.exec_module(timestral_tools)
-    return timestral_root, timestral_tools
-
-
-@app.cell
-def _(lstm_df_small, lstm_train_size, timestral_horizon, timestral_tools):
     timestral_data = timestral_tools.prepare_comparison(
         lstm_df_small, lstm_train_size,
         context_length=672, horizon=timestral_horizon, days=42,
@@ -1489,9 +1504,9 @@ def _(lstm_df_small, lstm_train_size, timestral_horizon, timestral_tools):
 
 
 @app.cell
-def _(timestral_data, timestral_model_id, timestral_root, timestral_tools):
+def _(timestral_data, timestral_model_id, timestral_tools, workbook_root):
     timestral_pretrained = timestral_tools.load_pretrained(
-        cache_dir=timestral_root / ".cache" / "timestral",
+        cache_dir=workbook_root / ".cache" / "timestral",
         model_id=timestral_model_id,
     )
     timestral_zero_shot = timestral_tools.forecast_days(timestral_pretrained, timestral_data)
@@ -1526,7 +1541,7 @@ def _(mo):
 
     The plots below show minibatch loss, loss on the same fixed fitting windows,
     and validation RMSE. Use them to distinguish learning from overfitting.
-    Inspect `timestral_task.py` to follow the forward, backward and optimizer steps.
+    Inspect `helpers.py` to follow the forward, backward and optimizer steps.
     This is an educational adapter around the public Mistral inference code.
     It matches the public forecaster's symmetric averaging and non-negative
     clipping; it is not Mistral Forge's training pipeline.
@@ -1596,7 +1611,7 @@ def _(mo):
 
 
 @app.cell
-def _(
+def compare_forecasts(
     lstm_model,
     lstm_scaler,
     lstm_test_normalized,
@@ -1629,56 +1644,53 @@ def _(
     return (timestral_lstm_predictions,)
 
 
-@app.cell
-def _(
-    plt,
-    timestral_data,
-    timestral_fine_tuned,
-    timestral_lstm_predictions,
-    timestral_zero_shot,
-):
-    _fig, _ax = plt.subplots(figsize=(12, 4))
-    _hours = timestral_data.dates.ravel()[:168]
-    _ax.plot(_hours, timestral_data.actuals.ravel()[:168], color="black", label="Actual", linewidth=2)
-    for _name, _prediction in [
-        ("Same hour yesterday", timestral_data.seasonal_naive),
-        ("Our LSTM", timestral_lstm_predictions),
-        ("Timestral zero-shot", timestral_zero_shot),
-        ("Timestral fine-tuned", timestral_fine_tuned),
-    ]:
-        _ax.plot(_hours, _prediction.ravel()[:168], label=_name, alpha=0.8)
-    _ax.set_title("Day-ahead forecasts: first week of the comparison")
-    _ax.set_ylabel("Consumption (MW)")
-    _ax.set_xlabel("Forecasted time")
-    _ax.legend()
-    _fig.autofmt_xdate()
-    _fig.tight_layout()
-    _fig
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    ## D. Inspect the forecasts and errors
+
+    Compare the full test period, the first day, the first week and the last week.
+    Each plot shows raw hourly consumption, with RMSE calculated over the hours
+    shown. The full-period view also includes the last week of training history.
+
+    The daily-error plot shows whether an overall improvement is consistent across
+    forecast origins. Use the fitting and validation curves to explain which epoch
+    was selected and whether further training started to overfit.
+    """)
     return
 
 
 @app.cell
-def _(plt, timestral_losses):
-    _fig, (_train_ax, _val_ax) = plt.subplots(2, 1, figsize=(8, 6))
-    _train_ax.plot(range(1, len(timestral_losses) + 1), timestral_losses,
-                   alpha=0.3, label="Minibatch loss")
-    _train_ax.plot([0] + [_record["step"] for _record in timestral_losses.validation],
-                   [timestral_losses.initial_fitting_loss] +
-                   [_record["fitting_loss"] for _record in timestral_losses.validation],
-                   marker="o", color="black", label="Same fixed fitting windows")
-    _train_ax.legend()
-    _train_ax.set_ylabel("Training MSE / fixed scale²")
-    _train_ax.set_title("Fine-tuning: learning versus generalisation")
-    _steps = [_record["step"] for _record in timestral_losses.validation]
-    _scores = [_record["rmse_mw"] for _record in timestral_losses.validation]
-    _val_ax.plot(_steps, _scores, marker="o", label="Trained checkpoints")
-    _val_ax.axhline(timestral_losses.zero_shot_validation_rmse, color="black",
-                    linestyle="--", label="Zero-shot validation baseline")
-    _val_ax.set_ylabel("Validation RMSE (MW)")
-    _val_ax.set_xlabel("Optimizer update")
-    _val_ax.legend()
-    _fig.tight_layout()
-    _fig
+def _(
+    mo,
+    timestral_data,
+    timestral_fine_tuned,
+    timestral_lstm_predictions,
+    timestral_tools,
+    timestral_zero_shot,
+):
+    timestral_plot_predictions = {
+        "Same hour yesterday": timestral_data.seasonal_naive,
+        "Our LSTM": timestral_lstm_predictions,
+        "Timestral zero-shot": timestral_zero_shot,
+        "Timestral fine-tuned": timestral_fine_tuned,
+    }
+    timestral_forecast_figures = timestral_tools.plot_forecast_views(
+        timestral_data, timestral_plot_predictions,
+    )
+    mo.vstack(timestral_forecast_figures)
+    return (timestral_plot_predictions,)
+
+
+@app.cell
+def _(timestral_data, timestral_plot_predictions, timestral_tools):
+    timestral_tools.plot_daily_errors(timestral_data, timestral_plot_predictions)
+    return
+
+
+@app.cell
+def _(timestral_losses, timestral_tools):
+    timestral_tools.plot_learning_curves(timestral_losses)
     return
 
 

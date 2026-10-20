@@ -11,10 +11,8 @@ dependencies = [
     "scikit-learn>=1.8.0,<2",
     "seaborn>=0.13.2,<0.14",
     "torch>=2.10.0,<3",
+    "timestral",
 ]
-
-[project.optional-dependencies]
-timestral = ["timestral"]
 
 [tool.uv]
 package = false

@@ -3,13 +3,16 @@ from dataclasses import replace
 from contextlib import contextmanager
 from types import SimpleNamespace
 import sys
+import importlib.util
+from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 import torch
 
-from bootcamp_9 import timestral_task as task
+from bootcamp_9 import helpers as task
 
 
 def example_frame():
@@ -58,6 +61,24 @@ def fake_timestral():
             sys.modules.pop('timestral', None)
         else:
             sys.modules['timestral'] = previous
+
+
+class WorkbookSetupTests(unittest.TestCase):
+    def test_both_original_workbooks_import_the_shared_helpers(self):
+        root = Path(__file__).resolve().parents[1] / 'bootcamp_9'
+        for variant in ['exercises', 'solutions']:
+            with self.subTest(workbook=variant):
+                spec = importlib.util.spec_from_file_location(
+                    f'bootcamp_nine_{variant}', root / variant / 'workbook.py',
+                )
+                notebook = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(notebook)
+                # Cell.run has no browser notebook location; supply that runtime value.
+                with patch('marimo.notebook_location', return_value=root / variant):
+                    _, definitions = notebook.setup.run()
+                self.assertIs(definitions['timestral_tools'], task)
+                self.assertEqual(definitions['workbook_root'], root)
+                self.assertTrue((root / 'AEP_hourly.csv').is_file())
 
 
 class ComparisonProtocolTests(unittest.TestCase):

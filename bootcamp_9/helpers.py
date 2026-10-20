@@ -1,4 +1,4 @@
-"""Small, local helpers for the optional Timestral comparison exercise.
+"""Shared utilities for the Bootcamp 9 workbooks.
 
 The upstream public package is an inference implementation. The fine-tuning
 loop below is an educational adapter around its differentiable predict_block
@@ -307,3 +307,136 @@ def score_forecasts(actuals, predictions):
         row['MAPE (%)'] = float(100 * np.mean(np.abs(error / actuals)))
         rows.append(row)
     return pd.DataFrame(rows)
+
+
+# Use the same model colors and line styles in every comparison figure.
+FORECAST_STYLES = {
+    'Same hour yesterday': {'color': '#8a8a8a', 'linestyle': ':', 'linewidth': 1.3},
+    'Our LSTM': {'color': '#bc751b', 'linestyle': '-.', 'linewidth': 1.4},
+    'Timestral zero-shot': {'color': '#2878b5', 'linestyle': '--', 'linewidth': 1.5},
+    'Timestral fine-tuned': {'color': '#c43c39', 'linestyle': '-', 'linewidth': 1.6},
+}
+
+
+def plot_forecast_views(data, predictions):
+    """Actual demand and identical forecasts at overview, daily and weekly scales.
+
+    Choose the beginning/end views in advance, not the best-performing days.
+    Display raw hourly values; the metrics in each subtitle use exactly those
+    forecast hours. Context history is only drawn in the overview.
+    """
+    import matplotlib.dates as mdates
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import StrMethodFormatter
+
+    dates, actuals = data.dates.ravel(), data.actuals.ravel()
+    views = [
+        ('All six test weeks', slice(None), True),
+        ('First 24 hours', slice(0, 24), False),
+        ('First week', slice(0, 168), False),
+        ('Last week', slice(-168, None), False),
+    ]
+    figures = []
+    with plt.rc_context({'font.size': 11, 'axes.titlesize': 15, 'legend.fontsize': 10}):
+        for title, span, show_history in views:
+            fig, ax = plt.subplots(figsize=(15, 5.5), layout='constrained')
+            if show_history:
+                ax.plot(data.train_dates[-168:], data.train_values[-168:],
+                        color='#2878b5', alpha=.45, linewidth=1.1,
+                        label='Observed training history')
+                ax.axvline(dates[0], color='#555555', linestyle=':', linewidth=1)
+                ax.text(dates[0], .98, ' Test starts', transform=ax.get_xaxis_transform(),
+                        color='#555555', fontsize=10, va='top')
+            ax.plot(dates[span], actuals[span], color='#111111', linewidth=2,
+                    label='Actual demand', zorder=5)
+            metrics = []
+            for name, prediction in predictions.items():
+                values = np.asarray(prediction).ravel()[span]
+                ax.plot(dates[span], values, label=name, **FORECAST_STYLES[name])
+                if name != 'Same hour yesterday':
+                    rmse = np.sqrt(np.mean((values - actuals[span]) ** 2))
+                    short_name = name.removeprefix('Timestral ')
+                    metrics.append(f'{short_name}: {rmse:,.0f} MW')
+            ax.set_title(f'{title} · rolling 24-hour forecasts', loc='left', pad=42)
+            ax.text(0, 1.045, 'RMSE over shown forecast hours  |  ' + '   ·   '.join(metrics),
+                    transform=ax.transAxes, color='#555555', fontsize=10)
+            ax.set_ylabel('Electricity consumption (MW)')
+            ax.set_xlabel('Forecasted time')
+            locator = mdates.AutoDateLocator(minticks=5, maxticks=9)
+            ax.xaxis.set_major_locator(locator)
+            ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
+            ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
+            ax.grid(True, alpha=.2)
+            ax.spines[['top', 'right']].set_visible(False)
+            ax.margins(x=.01)
+            fig.legend(*ax.get_legend_handles_labels(), loc='outside lower center',
+                       ncol=3, frameon=False)
+            figures.append(fig)
+    return figures
+
+
+def plot_daily_errors(data, predictions):
+    """Show day-to-day error, retaining both reported test subperiods."""
+    import matplotlib.dates as mdates
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import StrMethodFormatter
+
+    fig, ax = plt.subplots(figsize=(15, 5), layout='constrained')
+    for name, prediction in predictions.items():
+        daily_rmse = np.sqrt(np.mean((np.asarray(prediction) - data.actuals) ** 2, axis=1))
+        ax.plot(data.dates[:, 0], daily_rmse, label=name, **FORECAST_STYLES[name])
+    if len(data.origins) > 14:
+        boundary = data.dates[14, 0]
+        ax.axvline(boundary, color='#555555', linestyle=':', linewidth=1)
+        ax.text(boundary, .98, ' Weeks 3–6 start', transform=ax.get_xaxis_transform(),
+                fontsize=10, color='#555555', va='top')
+    ax.set_title('Forecast error by day · every test origin', loc='left', fontsize=15, pad=35)
+    ax.set_ylabel('Daily RMSE (MW)')
+    ax.set_xlabel('Start of the 24-hour forecast')
+    ax.set_ylim(bottom=0)
+    locator = mdates.AutoDateLocator(minticks=5, maxticks=9)
+    ax.xaxis.set_major_locator(locator)
+    ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
+    ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
+    ax.grid(True, alpha=.2)
+    ax.spines[['top', 'right']].set_visible(False)
+    fig.legend(*ax.get_legend_handles_labels(), loc='outside lower center', ncol=4, frameon=False)
+    return fig
+
+
+def plot_learning_curves(history):
+    """Fitting loss and independent validation error, with the selected epoch."""
+    import matplotlib.pyplot as plt
+
+    fig, (train_ax, validation_ax) = plt.subplots(2, 1, figsize=(15, 8), layout='constrained')
+    steps = [record['step'] for record in history.validation]
+    train_ax.plot(np.arange(1, len(history) + 1), history, color='#2878b5', alpha=.3,
+                  linewidth=1, label='Minibatch MSE')
+    train_ax.plot([0] + steps, [history.initial_fitting_loss] +
+                  [record['fitting_loss'] for record in history.validation],
+                  color='#111111', marker='o', linewidth=2, label='Same fixed fitting windows')
+    train_ax.set_title('Fine-tuning · fitting loss', loc='left', fontsize=15)
+    train_ax.set_ylabel('MSE / fixed training scale²')
+    train_ax.set_xlabel('Optimizer update')
+    train_ax.set_ylim(bottom=0)
+    train_ax.legend(frameon=False)
+
+    epochs = [record['epoch'] for record in history.validation]
+    scores = [record['rmse_mw'] for record in history.validation]
+    validation_ax.plot(epochs, scores, color='#c43c39', marker='o', linewidth=2,
+                       label='Trained checkpoints')
+    validation_ax.axhline(history.zero_shot_validation_rmse, color='#2878b5', linestyle='--',
+                          label=f'Zero-shot: {history.zero_shot_validation_rmse:,.0f} MW')
+    validation_ax.scatter(history.selected_epoch, history.selected_validation_rmse,
+                          s=150, marker='*', color='#111111', zorder=5,
+                          label=f'Selected epoch {history.selected_epoch}: {history.selected_validation_rmse:,.0f} MW')
+    validation_ax.set_title('Fine-tuning · pre-test validation RMSE', loc='left', fontsize=15)
+    validation_ax.set_ylabel('Validation RMSE (MW)')
+    validation_ax.set_xlabel('Completed epoch')
+    validation_ax.set_xticks(epochs)
+    validation_ax.margins(y=.2)
+    validation_ax.legend(frameon=False)
+    for ax in [train_ax, validation_ax]:
+        ax.grid(True, alpha=.2)
+        ax.spines[['top', 'right']].set_visible(False)
+    return fig
