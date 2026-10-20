@@ -7,6 +7,7 @@ Workbooks and exercises for the ReLU bootcamp. Choose your session:
 | Bootcamp 2 | Python, NumPy, pandas, plotting and PyTorch | [Open Bootcamp 2](bootcamp_2/README.md) |
 | Bootcamp 6 | K-nearest neighbours, decision trees and evaluation | [Open Bootcamp 6](bootcamp_6/README.md) |
 | Bootcamp 8 | Random forest cross-validation and hyperparameter tuning | [Open Bootcamp 8](bootcamp_8/README.md) |
+| Bootcamp 9 | Time series, RNNs, LSTMs and expanding-window evaluation | [Open Bootcamp 9](bootcamp_9/README.md) |
 
 ## Get the workbooks
 
@@ -20,7 +21,7 @@ cd education-26-27
 
 Already have the repository? Open a terminal in its folder and run `git pull`.
 Then follow the instructions for your session above. You can use a browser or,
-for Bootcamps 6 and 8, the marimo extension in VS Code.
+for Bootcamps 6, 8 and 9, the marimo extension in VS Code.
 
 ## Keep your answers
 
