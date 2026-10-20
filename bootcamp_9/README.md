@@ -52,3 +52,50 @@ The class and solutions notebooks and dataset come from
 Notebook prose, comments, plots and exercise content are preserved. Variable
 names and dependencies are separated between model sections for marimo's
 reactive execution; setup uses this folder's locked uv environment.
+
+## Optional final task: Timestral-5M
+
+The last task compares the existing LSTM, a same-hour-yesterday baseline,
+zero-shot Timestral-5M and a locally fine-tuned copy. It uses the first 14 daily
+24-hour forecast windows after the existing training split. All models are
+scored on the same targets. The last 14 days before the test split are reserved
+for validation; optimizer updates only sample earlier windows. The best trained
+checkpoint is selected by validation RMSE, with the untouched zero-shot validation
+score reported separately. Test scores do not select the checkpoint.
+
+Start it with the optional dependencies:
+
+```sh
+uv run --locked --project bootcamp_9 --extra timestral python bootcamp_9/start.py
+```
+
+Add `--solution` for the complete version or `--setup` for VS Code. The optional
+extra installs the pinned official Timestral Git repository, so Git and internet
+access are needed initially. Clicking **Run Timestral task** downloads the
+approximately 21 MB pinned checkpoint to `bootcamp_9/.cache/timestral`.
+Opening the notebook does not start the optional download or fine-tuning.
+Both forecasting and the 40-update fine-tuning exercise run locally on the CPU.
+The fine-tuning loop is an educational adapter, not Mistral Forge's training pipeline.
+
+If you already have a personal workbook, rename it as a backup before running
+setup to create a fresh copy with this new task. Setup preserves existing files;
+you can transfer your earlier exercise answers from the backup.
+
+The original notebook sections are unchanged. The comparison retains each
+model's input recipe: the LSTM's original seven lag/time-feature rows, versus
+four weeks of consumption history for Timestral. Later forecast origins may
+use earlier test observations as history; fine-tuning never updates on them.
+This classroom experiment does not establish that AEP was absent from the
+foundation model's pretraining data.
+
+Sources: [official Timestral code](https://github.com/mistralai/timestral),
+[Timestral-5M model card](https://huggingface.co/mistralai/Timestral-5M).
+The checkpoint's weights use Mistral's Modified MIT license; the package code
+uses Apache 2.0. Checkpoint and package revisions are pinned in the helper and
+uv lockfile respectively.
+
+To check the comparison protocol without downloading weights:
+
+```sh
+uv run --locked --project bootcamp_9 python -m unittest discover -s bootcamp_9/tests -v
+```
